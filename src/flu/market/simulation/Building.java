@@ -11,7 +11,7 @@ import java.util.*;
  *
  * @author yisak
  */
-public class Location {
+public class Building {
     int id;
     int total_population;
     float initial_money_resident;
@@ -26,7 +26,7 @@ public class Location {
     int end_of_S;
     int end_of_I;
     
-    public Location(int _id, int _total_population, float _market_participant_rate, float _initial_money_resident,
+    public Building(int _id, int _total_population, float _market_participant_rate, float _initial_money_resident,
             float _infection_rate, float _recovery_rate, float _time_scale, int _population_S, int _population_I, int _population_R){
         id = _id;
         total_population = _total_population;
