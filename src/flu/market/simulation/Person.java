@@ -17,6 +17,7 @@ public class Person {
     FluMarketSimulation.health_state health_state;
     float money;
     ArrayList<Integer> observation_list = new ArrayList<Integer>();
+    ArrayList<Share> share_list = new ArrayList<Share>();
     
     public Person(int _id, int _residence, boolean _market_participant, FluMarketSimulation.health_state _health_state, float _money){
         id = _id;
