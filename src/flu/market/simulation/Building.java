@@ -36,6 +36,7 @@ public class Building {
         
         initialize_residents();
     }
+
     
     private void initialize_residents(){
         residents = new Person[total_population];

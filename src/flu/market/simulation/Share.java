@@ -19,4 +19,5 @@ public class Share {
         flu_population_rate = _flu_population_rate;
         quantity = _quantity;
     }
+
 }

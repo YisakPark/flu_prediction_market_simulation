@@ -16,8 +16,8 @@ public class Person {
     boolean market_participant;
     FluMarketSimulation.health_state health_state;
     float money;
-    ArrayList<Integer> observation_list = new ArrayList<Integer>();
-    ArrayList<Share> share_list = new ArrayList<Share>();
+    ArrayList<Integer> observation_list = new ArrayList<>();
+    ArrayList<Share> share_list = new ArrayList<>();
     
     public Person(int _id, int _residence, boolean _market_participant, FluMarketSimulation.health_state _health_state, float _money){
         id = _id;
@@ -25,5 +25,40 @@ public class Person {
         market_participant = _market_participant;
         health_state = _health_state;
         money = _money;
+    }
+    
+    //if there is a share in the 'share_list', which has same as arg 'share' except for quantity,
+    //update quantity of the share in 'share_list'
+    //otherwise, add the 'share' in the 'share_list'
+    public void add_share(Share _share){
+        int size = share_list.size();        
+        
+        for(int i=0; i<size; i++){
+            Share share = share_list.get(i);
+            if(share.security_group_id == _share.security_group_id && share.flu_population_rate == _share.flu_population_rate){
+                share_list.get(i).quantity += _share.quantity;
+                return;
+            }
+        }
+        
+        //if there is no corresponding share, just add new share
+        share_list.add(_share);        
+    }
+    
+    //update quantity of the '_share' in 'share_list'
+    //if the quantity becomes 0, remove the '_share' from the 'share_list'
+    public void remove_share(Share _share){
+        int size = share_list.size();        
+        
+        for(int i=0; i<size; i++){
+            Share share = share_list.get(i);
+            if(share.security_group_id == _share.security_group_id && share.flu_population_rate == _share.flu_population_rate){
+                share_list.get(i).quantity -= _share.quantity;
+                if(share_list.get(i).quantity == 0){
+                    share_list.remove(i);
+                }
+                return;
+            }
+        }
     }
 }
