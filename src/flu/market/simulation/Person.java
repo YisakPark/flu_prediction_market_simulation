@@ -16,15 +16,21 @@ public class Person {
     boolean market_participant;
     FluMarketSimulation.health_state health_state;
     float money;
-    ArrayList<Integer> observation_list = new ArrayList<>();
+    Observation[] observations;
     ArrayList<Share> share_list = new ArrayList<>();
     
-    public Person(int _id, int _residence, boolean _market_participant, FluMarketSimulation.health_state _health_state, float _money){
+    public Person(int _id, int _residence, boolean _market_participant, 
+            FluMarketSimulation.health_state _health_state, float _money, int _total_buildings){
         id = _id;
         residence = _residence;
         market_participant = _market_participant;
         health_state = _health_state;
         money = _money;
+        observations = new Observation[_total_buildings];
+        
+        for(int i=0; i<_total_buildings; i++){
+            observations[i] = new Observation(i, 0);
+        }
     }
     
     //if there is a share in the 'share_list', which has same as arg 'share' except for quantity,
@@ -60,5 +66,14 @@ public class Person {
                 return;
             }
         }
+    }
+    
+    //print observations
+    public void print_observation(){
+        System.out.println("building: " + residence + ", resident: " + id + ", observations will be printed as [building id : observed flu rate]");
+        for (Observation observation : observations) {
+            System.out.print("[" + observation.building_id + ":" + observation.observed_flu_rate + "] ");
+        }
+        System.out.println();
     }
 }
