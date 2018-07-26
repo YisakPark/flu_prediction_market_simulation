@@ -12,14 +12,14 @@ import java.util.*;
  * @author YisakPark
  */
 public class SecurityGroup {
-    int date_market;
+    int market_date;
     int building_num;
     int shares;
     float price;
     ArrayList<Share> share_list = new ArrayList<>();
     
-    public SecurityGroup(int _date_market, int _building_num, int _shares, int _price){
-        date_market = _date_market;
+    public SecurityGroup(int _market_date, int _building_num, int _shares, int _price){
+        market_date = _market_date;
         building_num = _building_num;
         shares = _shares;
         price = _price;
