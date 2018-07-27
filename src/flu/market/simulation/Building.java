@@ -114,6 +114,7 @@ public class Building {
     }    
     
     public float get_flu_population_rate(){
-        return flu_spread.population_I / total_population;
+        //those are integers
+        return (float) flu_spread.population_I / total_population;
     }
 }

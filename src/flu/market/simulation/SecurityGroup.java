@@ -59,4 +59,34 @@ public class SecurityGroup {
             }
         }
     }
+    
+    //get the mean of the graph where x-axis is the flu population rate and y-axis is the quantity of share
+    public float get_mean(){
+        float sum = 0;
+        int size = share_list.size();
+        
+        for(int i=0; i<size; i++){
+            sum += share_list.get(i).flu_population_rate * share_list.get(i).quantity;
+        }            
+        if(shares != 0)
+            return sum / shares;
+        else
+            return 0;
+    }
+    
+    //get the standard variation of the graph where x-axis is the flu population rate and y-axis is the quantity of share
+    public float get_std_var(float mean){
+        float sum = 0;
+        int size = share_list.size();
+        
+        for(int i=0; i<size; i++){
+            float a = share_list.get(i).flu_population_rate - mean;
+            sum += Math.pow(a, 2) * share_list.get(i).quantity;
+        }
+        
+        if(shares != 0)
+            return (float) Math.sqrt(sum / shares);
+        else
+            return 0;
+    }
 }
