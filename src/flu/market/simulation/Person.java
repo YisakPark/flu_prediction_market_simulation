@@ -16,16 +16,18 @@ public class Person {
     boolean market_participant;
     FluMarketSimulation.health_state health_state;
     float money;
+    float observation_error_rate;
     Observation[] observations;
     ArrayList<Share> share_list = new ArrayList<>();
     
     public Person(int _id, int _residence, boolean _market_participant, 
-            FluMarketSimulation.health_state _health_state, float _money, int _total_buildings){
+            FluMarketSimulation.health_state _health_state, float _money, float _observation_error_rate, int _total_buildings){
         id = _id;
         residence = _residence;
         market_participant = _market_participant;
         health_state = _health_state;
         money = _money;
+        observation_error_rate = _observation_error_rate;
         observations = new Observation[_total_buildings];
         
         for(int i=0; i<_total_buildings; i++){
@@ -77,9 +79,7 @@ public class Person {
         System.out.println();
     }
     
-    /*
-    public void evaulate_prediction_accuracy(){
-        
+    void give_payoff(float payoff){
+        money += payoff;
     }
-    */
 }

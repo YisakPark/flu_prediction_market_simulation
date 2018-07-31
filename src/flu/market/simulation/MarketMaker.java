@@ -5,6 +5,8 @@
  */
 package flu.market.simulation;
 
+import org.jfree.data.xy.XYSeries;
+
 /**
  *
  * @author YisakPark
@@ -24,10 +26,15 @@ public class MarketMaker {
     int initial_population_S_per_building;
     int initial_population_I_per_building;
     int initial_population_R_per_building;
+    float[] ground_truths; //'ground_truth[x]' is the actual flu patient ratio of the building on the date specified by 'x' which is security group id.
+    float[] estimated_ground_truths;
+    float EGT_rate; //must be within [0,1]
+    Person[] total_participants;
     
     public MarketMaker(int _total_buildings, int _total_days, float _liquidity_param, int _total_population_per_building,
             float _market_participant_rate_per_building, float _initial_money_resident, float _infection_rate, float _recovery_rate,
-            float _time_scale, int _initial_population_S_per_building, int _initial_population_I_per_building, int _initial_population_R_per_building){
+            float _time_scale, int _initial_population_S_per_building, int _initial_population_I_per_building, int _initial_population_R_per_building,
+            float _maximum_observation_error_rate, float _minimum_observation_error_rate, float _EGT_rate){
         total_buildings = _total_buildings;
         total_days = _total_days;
         liquidity_param = _liquidity_param;
@@ -56,10 +63,33 @@ public class MarketMaker {
         //initialize building objects
         for (int j = 0; j < total_buildings; j++) {
             buildings[j] = new Building(j, total_population_per_building, market_participant_rate_per_building, initial_money_resident,
-                    infection_rate, recovery_rate, time_scale, initial_population_S_per_building,
-                    initial_population_I_per_building, initial_population_R_per_building, total_buildings);
+                    infection_rate, recovery_rate, time_scale, initial_population_S_per_building, initial_population_I_per_building, 
+                    initial_population_R_per_building, total_buildings, _maximum_observation_error_rate, _minimum_observation_error_rate);
+        }
+
+        ground_truths = new float[total_days * total_buildings];
+        estimated_ground_truths = new float[total_days * total_buildings];
+       
+        EGT_rate = _EGT_rate;
+        
+        //initialize 'total_participants' array
+        int total_market_participants = 0;
+        for( int j=0; j<total_buildings; j++){
+            total_market_participants += buildings[j].number_market_participants;
+        }
+        total_participants = new Person[total_market_participants];
+        i = 0;
+        for( int j=0; j<total_buildings; j++){
+            for( int k=0; k<buildings[j].participants.length; k++){
+                int participant_idx = buildings[j].participants[k];
+                total_participants[i] = buildings[j].residents[participant_idx];
+                i++;
+            }
         }
     }
+
+
+
     
     //get the cost to buy or sell the shares of security.
     //'market_date': market date whose security shares will be traded
@@ -71,7 +101,7 @@ public class MarketMaker {
         
         prior_investment_amount = get_investment_amount(market_date);
         posterior_investment_amount = get_investment_amount(market_date, security_group_id, quantity);
-        return Math.abs(posterior_investment_amount - prior_investment_amount); 
+        return quantity * Math.abs(posterior_investment_amount - prior_investment_amount); 
     }
 
     //get the investment amount of the market specified by the 'market_date'
@@ -139,7 +169,8 @@ public class MarketMaker {
     //buying the shares
     //return false, if the buying fails, otherwise true.
     public boolean buy_process(int security_group_id, int quantity, float flu_population_rate, int buyer_building_id, int resident_id){
-        Share share = new Share(security_group_id, flu_population_rate, quantity);
+        Share share = new Share(security_group_id, buyer_building_id, resident_id, 
+                flu_population_rate, quantity, security_groups[security_group_id].price);
         int market_date = security_groups[security_group_id].market_date;
         //if quantity is <= 0 or buyer cannot affordable, return false
         if(quantity <= 0 || buildings[buyer_building_id].residents[resident_id].money < get_cost(market_date, security_group_id, quantity))
@@ -154,9 +185,13 @@ public class MarketMaker {
         return true;
     }
     
+    /*
+    it should return boolean value!!!!
+    */    
     //selling the shares
     public void sell_process(int security_group_id, int quantity, float flu_population_rate, int seller_building_id, int resident_id){
-        Share share = new Share(security_group_id, flu_population_rate, -quantity);
+        Share share = new Share(security_group_id, seller_building_id, resident_id, 
+                flu_population_rate, -quantity, security_groups[security_group_id].price);
         int market_date = security_groups[security_group_id].market_date;
         
         //update user's current money and shares
@@ -172,4 +207,134 @@ public class MarketMaker {
         return (date * total_buildings) + building_id;
     }    
 
+    //determines payoff per share
+    public float payoff_per_share(float truth, float predicted_truth){
+        return (float) Math.exp(-Math.abs(truth - predicted_truth));
+    }
+    
+    
+    //if it is true, payoff will be determined using EGT
+    boolean determine_payoff_with_EGT(){
+        return Math.random() <= EGT_rate; 
+    }    
+
+    public void sort_total_participants_money_decreasing_order(){
+        quickSort_person_arr(total_participants, 0, total_participants.length-1);
+    }
+    
+    //'low' -> starting index, 'high' -> ending indx
+    void quickSort_person_arr(Person[] person_arr, int low, int high){
+        if(low < high){
+            /* pi is partitioning index, arr[p] is now
+           at right place */
+            int pi = partition(person_arr, low, high);
+
+            quickSort_person_arr(person_arr, low, pi - 1);  // Before pi
+            quickSort_person_arr(person_arr, pi + 1, high); // After pi            
+        }
+    }
+    
+    /* This function takes last element as pivot, places
+   the pivot element at its correct position in sorted
+    array, and places all smaller (smaller than pivot)
+   to left of pivot and all greater elements to right
+   of pivot */
+    int partition (Person[] person_arr, int low, int high){
+        // pivot (Element to be placed at right position)
+        float pivot = person_arr[high].money;  
+ 
+        int i = (low - 1);  // Index of smaller element
+
+        for (int j = low; j <= high- 1; j++){
+            // If current element is greater than or
+            // equal to pivot
+            if (person_arr[j].money >= pivot){
+                i++;    // increment index of greater element
+                //swap person_arr[i] and person_arr[j]
+                Person temp = person_arr[i];
+                person_arr[i] = person_arr[j];
+                person_arr[j] = temp;
+        }
+        }
+        //swap person_arr[i+1] and person_arr[high]
+        Person temp = person_arr[i+1];
+        person_arr[i+1] = person_arr[high];
+        person_arr[high] = temp;
+
+        return (i + 1);
+    }
+    
+    
+    public void show_total_participants(){
+        System.out.println("This is the list of total participants in the market");
+        for (Person total_participant : total_participants) {
+            System.out.println("Building: " + total_participant.residence + 
+                    ", person id: " + total_participant.id + 
+                    ", money: " + total_participant.money);
+        }
+        System.out.println();
+    }
+
+    //Assuming 'total_participants' are sorted according to the money each agent has,
+    //this method divide the 'total_participants' from top to bottom.
+    //There are 'number_people_division' people in each division
+    //It shows the average observation error rate of the people in each division.
+    void show_average_observation_error_rate(int number_people_division){
+        float sum_observation_error_rate_division = 0;
+        int count_people_division = 0;
+        for (int i=0; i<total_participants.length; i++){
+            sum_observation_error_rate_division += total_participants[i].observation_error_rate;
+            count_people_division++;
+            if(count_people_division == number_people_division){
+                System.out.println("The average observation error rate of top " + (i-number_people_division+2) +
+                        " ~ top " + (i+1) + " users: " + (sum_observation_error_rate_division / number_people_division));
+                sum_observation_error_rate_division = 0;
+                count_people_division = 0;
+            }
+        }
+        System.out.println();
+    }
+    
+    //Assuming 'total_participants' are sorted according to the money each agent has,
+    //this method divide the 'total_participants' from top to bottom.
+    //There are 'number_people_division' people in each division
+    //It shows the average price of securities that user bought in each division
+    void show_average_price_users_bought(int number_people_division){
+        float sum_price_division = 0;
+        float sum_price_user = 0;
+        int count_people_division = 0;
+        for (int i=0; i<total_participants.length; i++){
+            for (int j=0; j<total_participants[i].share_list.size(); j++){
+                sum_price_user += total_participants[i].share_list.get(j).price_of_security;
+            }
+            sum_price_division += sum_price_user / total_participants[i].share_list.size();
+            sum_price_user = 0;
+            count_people_division++;
+            if(count_people_division == number_people_division){
+                System.out.println("The average price of securities that top " + (i-number_people_division+2) +
+                        " ~ top " + (i+1) + " users bought: " + (sum_price_division / number_people_division));
+                sum_price_division = 0;
+                count_people_division = 0;                
+            }
+        }
+        System.out.println();        
+    }
+    
+    //show ground truth and estimated ground truth
+    void show_GT_EGT(){
+        /*
+        int size = total_days * total_buildings;
+        for( int i=0; i<size; i++){
+            System.out.println("On the date " + security_groups[i].market_date +
+                    " in the building " + security_groups[i].building_num +
+                    ", the difference between the actual flu population rate and the mean of predicted flu population rate  was " 
+                    + Math.abs(ground_truths[i] - estimated_ground_truths[i]));
+        }
+        */
+        XYSeries series = new XYSeries("observation");
+        series.add(date, 0);
+        //ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
+        //scatter.show_scatter(); 
+        
+    }
 }

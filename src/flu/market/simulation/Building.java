@@ -20,7 +20,10 @@ public class Building {
     Person[] residents;
     FluSpread flu_spread;
     int total_buildings;
-    int[] participants; //the element of this array points market participant
+    float maximum_observation_error_rate;
+    float minimum_observation_error_rate;
+    int number_market_participants;
+    int[] participants; //the element of this array is the index of element in 'residents', pointing market participant
     
     //In residents array, from Person[0] to Person[end_of_S] are in state S
     //from residents[end_of_S+1] to Person[end_of_I] are in state I
@@ -30,14 +33,17 @@ public class Building {
     int end_of_I;
     
     public Building(int _id, int _total_population, float _market_participant_rate, float _initial_money_resident, float _infection_rate, 
-            float _recovery_rate, float _time_scale, int _population_S, int _population_I, int _population_R, int _total_buildings){
+            float _recovery_rate, float _time_scale, int _population_S, int _population_I, int _population_R, int _total_buildings,
+            float _maximum_observation_error_rate, float _minimum_observation_error_rate){
         id = _id;
         total_population = _total_population;
         market_participant_rate = _market_participant_rate;
         initial_money_resident = _initial_money_resident;
         flu_spread = new FluSpread(_infection_rate, _recovery_rate, _time_scale, _population_S, _population_I, _population_R, total_population);
         total_buildings = _total_buildings;
-        
+        maximum_observation_error_rate = _maximum_observation_error_rate;
+        minimum_observation_error_rate = _minimum_observation_error_rate;
+        number_market_participants = (int)(total_population*market_participant_rate);
         initialize_residents();
     }
 
@@ -45,11 +51,16 @@ public class Building {
     private void initialize_residents(){
         residents = new Person[total_population];
         for(int i=0; i < total_population; i++){
-            residents[i] = new Person(i, id, false, health_state.S, initial_money_resident, total_buildings);
+            float observation_accuracy = get_random_within_range(minimum_observation_error_rate, maximum_observation_error_rate);
+            residents[i] = new Person(i, id, false, health_state.S, initial_money_resident, observation_accuracy, total_buildings);
         }
         set_market_participants();
         set_end_index();
         spread_disease();
+    }
+    
+    private float get_random_within_range(float min, float max){
+        return (float) ((Math.random() * ((max - min) + 1)) + min);
     }
     
     //set 'end_of_S' and 'end_of_I'
@@ -61,7 +72,6 @@ public class Building {
     //set market participant according to participant rate
     private void set_market_participants(){
         //get random number without duplication
-        int number_market_participants = (int)(total_population*market_participant_rate);
         int count_market_participants = 0;
         
         participants = new int[number_market_participants];
