@@ -6,6 +6,7 @@
 package flu.market.simulation;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import org.jfree.data.xy.XYSeries;
 /**
  *
@@ -34,13 +35,14 @@ public class FluMarketSimulation {
         float liquidity_param = (float)32.0;
         MarketMaker market_maker;
         //the lower the observation error rate, the better agent observe flu population rate close to the actual rate
-        float maximum_observation_error_rate = (float) 10;
+        float maximum_observation_error_rate = (float) 15;
         float minimum_observation_error_rate = (float) 0; //must be greater than 0 
         float EGT_rate = (float) 0.1; //must be [0,1], We need to determine the actual flu population rate of each building. 
                                     //But the estimated flu population rate will be determined instead for 
                                     //the buildings whose number is set by 'EGT_rate' * 'total_buildings' will 
               
         float security_flu_rate_gaussian_std_dev = (float) 0.2;
+        float sell_price_gaussian_std_dev = (float) 0.1;
         float quantity_gaussian_mean = (float) 10;
         float quantity_gaussian_std_dev = (float) 2.4;
         float date_gaussian_std_dev = (float) 0.1;
@@ -50,7 +52,7 @@ public class FluMarketSimulation {
         initial_population_S_per_building, initial_population_I_per_building, initial_population_R_per_building,
         maximum_observation_error_rate, minimum_observation_error_rate, EGT_rate);
        
-        
+XYSeries series = new XYSeries("observation");
         for (int i = 0; i < total_days; i++) {
             //simulate disease spread
             System.out.println("This is the status of flu spread");
@@ -73,7 +75,7 @@ public class FluMarketSimulation {
                         float observed_flu_rate = get_gaussian(market_maker.buildings[l].get_flu_population_rate(), 
                                 market_maker.buildings[j].residents[market_participant].observation_error_rate, 0, 1);
                         market_maker.buildings[j].residents[market_participant].observations[l].observed_flu_rate = observed_flu_rate;
-//series.add(observed_flu_rate, 0);
+series.add(market_maker.buildings[l].get_flu_population_rate(), observed_flu_rate);
                     }
                 }
             }
@@ -102,8 +104,6 @@ public class FluMarketSimulation {
                         int quantity;
                         int date = (int) Math.floor(get_gaussian(i, date_gaussian_std_dev, i, total_days));
                         int security_group_id = market_maker.get_security_group_id(date, l);
-//                        if(security_group_id >= market_maker.security_groups.length)
-//                            System.out.println();
                         
                         quantity = (int) get_gaussian(quantity_gaussian_mean, quantity_gaussian_std_dev);
                         market_maker.buy_process(security_group_id, quantity, flu_rate, j, market_participant);                      
@@ -112,7 +112,22 @@ public class FluMarketSimulation {
                 }
             }
 //ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
-//scatter.show_scatter();            
+//scatter.show_scatter();           
+
+            
+            //selling shares
+            for(int j=0; j<total_buildings; j++){
+                for(int k=0; k<market_maker.buildings[j].participants.length; k++){
+                    //this loop iterates through market participants whose residence is building 'j'
+                    int market_participant = market_maker.buildings[j].participants[k];
+                    float price = get_gaussian(1, sell_price_gaussian_std_dev, 0, 1);
+                    Share share = market_maker.pick_share(j, market_participant, price);
+                    int quantity = get_rand_int(0, share.quantity);
+                    market_maker.sell_process(share.security_group_id, quantity, share.flu_population_rate,
+                            share.buyer_residence, share.buyer_resident_id);                    
+                }
+            }
+
             
             //payoff
             for(int j=0; j<total_buildings; j++){
@@ -147,6 +162,8 @@ public class FluMarketSimulation {
         market_maker.show_average_price_users_bought(number_people_division);
         market_maker.show_GT_EGT();
         market_maker.show_euclidean_distance_of_GT_EGT();
+ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
+scatter.show_scatter();          
     }
 
     //checks whether the sum of population in each state is equal to the total population
@@ -177,6 +194,10 @@ public class FluMarketSimulation {
         }while(lower_bound > gaussian || gaussian > upper_bound);
         
         return gaussian;
+    }
+    
+    public static int get_rand_int(int min, int max){
+        return ThreadLocalRandom.current().nextInt(min, max + 1);
     }
     
 }

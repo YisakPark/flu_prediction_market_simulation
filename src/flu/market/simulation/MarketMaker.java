@@ -5,6 +5,7 @@
  */
 package flu.market.simulation;
 
+import java.util.Iterator;
 import org.jfree.data.xy.XYSeries;
 
 /**
@@ -101,7 +102,7 @@ public class MarketMaker {
         
         prior_investment_amount = get_investment_amount(market_date);
         posterior_investment_amount = get_investment_amount(market_date, security_group_id, quantity);
-        return quantity * Math.abs(posterior_investment_amount - prior_investment_amount); 
+        return Math.abs(quantity * (posterior_investment_amount - prior_investment_amount)); 
     }
 
     //get the investment amount of the market specified by the 'market_date'
@@ -195,7 +196,9 @@ public class MarketMaker {
         int market_date = security_groups[security_group_id].market_date;
         
         //update user's current money and shares
-        buildings[seller_building_id].residents[resident_id].money += get_cost(market_date, security_group_id, -quantity);
+        float earned_money = get_cost(market_date, security_group_id, -quantity);
+        buildings[seller_building_id].residents[resident_id].money += earned_money;
+        buildings[seller_building_id].residents[resident_id].money_earned_selling += earned_money;
         buildings[seller_building_id].residents[resident_id].remove_share(share);
         //update market status
         security_groups[security_group_id].shares -= quantity;
@@ -271,6 +274,12 @@ public class MarketMaker {
             System.out.println("Building: " + total_participant.residence + 
                     ", person id: " + total_participant.id + 
                     ", money: " + total_participant.money);
+            /*
+            System.out.println("Building: " + total_participant.residence + 
+                    ", person id: " + total_participant.id + 
+                    ", money: " + total_participant.money +
+                    ", money earned by selling shares: " + total_participant.money_earned_selling);
+            */
         }
         System.out.println();
     }
@@ -322,7 +331,6 @@ public class MarketMaker {
     
     //show ground truth and estimated ground truth
     void show_GT_EGT(){
-        /*
         int size = total_days * total_buildings;
         for( int i=0; i<size; i++){
             System.out.println("On the date " + security_groups[i].market_date +
@@ -330,11 +338,37 @@ public class MarketMaker {
                     ", the difference between the actual flu population rate and the mean of predicted flu population rate  was " 
                     + Math.abs(ground_truths[i] - estimated_ground_truths[i]));
         }
-        */
-        XYSeries series = new XYSeries("observation");
-        series.add(date, 0);
+        System.out.println();
+        //XYSeries series = new XYSeries("observation");
+        //series.add(date, 0);
         //ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
         //scatter.show_scatter(); 
         
+    }
+    //pick the share whose price is the closest to 'price' among the share list of the person specified by 'building id' and 'resident_id'
+    Share pick_share(int building_id, int resident_id, float price){
+        Share picked_share = buildings[building_id].residents[resident_id].share_list.get(0);
+        float price_difference = 1;
+        Iterator<Share> itr = buildings[building_id].residents[resident_id].share_list.iterator();
+        
+        while(itr.hasNext()){
+            Share share = itr.next();
+            if(price_difference >= Math.abs(security_groups[share.security_group_id].price - price)){
+                price_difference = Math.abs(security_groups[share.security_group_id].price - price);
+                picked_share = share;
+            }
+        }
+        return picked_share;
+    }
+    
+    void show_euclidean_distance_of_GT_EGT(){
+        float euclidean_distance = 0;
+        int size = total_days * total_buildings;
+        for( int i=0; i<size; i++){
+            euclidean_distance += Math.pow(ground_truths[i] - estimated_ground_truths[i], 2);
+        }
+        euclidean_distance =  (float) Math.sqrt(euclidean_distance);
+        System.out.println("The eucildean distance is " + euclidean_distance);
+        System.out.println();
     }
 }

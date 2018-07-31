@@ -16,6 +16,7 @@ public class Person {
     boolean market_participant;
     FluMarketSimulation.health_state health_state;
     float money;
+    float money_earned_selling;
     float observation_error_rate;
     Observation[] observations;
     ArrayList<Share> share_list = new ArrayList<>();
@@ -27,6 +28,7 @@ public class Person {
         market_participant = _market_participant;
         health_state = _health_state;
         money = _money;
+        money_earned_selling = (float) 0;
         observation_error_rate = _observation_error_rate;
         observations = new Observation[_total_buildings];
         
@@ -82,4 +84,6 @@ public class Person {
     void give_payoff(float payoff){
         money += payoff;
     }
+    
+
 }

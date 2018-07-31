@@ -15,7 +15,7 @@ public class Share {
     int buyer_resident_id;
     float flu_population_rate;
     int quantity;
-    float price_of_security;
+    float price_of_security; //the price when user buy the shares, not current price
     
     public Share(int _security_group_id, int _buyer_residence, int _buyer_resident_id, float _flu_population_rate, int _quantity, float _price_of_security){
         security_group_id = _security_group_id;
