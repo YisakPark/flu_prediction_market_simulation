@@ -146,6 +146,7 @@ public class FluMarketSimulation {
         market_maker.show_average_observation_error_rate(number_people_division);
         market_maker.show_average_price_users_bought(number_people_division);
         market_maker.show_GT_EGT();
+        market_maker.show_euclidean_distance_of_GT_EGT();
     }
 
     //checks whether the sum of population in each state is equal to the total population
