@@ -40,7 +40,7 @@ public class FluMarketSimulation {
         float EGT_rate = (float) 0.1; //must be [0,1], We need to determine the actual flu population rate of each building. 
                                     //But the estimated flu population rate will be determined instead for 
                                     //the buildings whose number is set by 'EGT_rate' * 'total_buildings' will 
-              
+        float observation_gaussian_std_dev = (float) 0.1;      
         float security_flu_rate_gaussian_std_dev = (float) 0.2;
         float sell_price_gaussian_std_dev = (float) 0.1;
         float quantity_gaussian_mean = (float) 10;
@@ -52,7 +52,7 @@ public class FluMarketSimulation {
         initial_population_S_per_building, initial_population_I_per_building, initial_population_R_per_building,
         maximum_observation_error_rate, minimum_observation_error_rate, EGT_rate);
        
-XYSeries series = new XYSeries("observation");
+//XYSeries series = new XYSeries("observation");
         for (int i = 0; i < total_days; i++) {
             //simulate disease spread
             System.out.println("This is the status of flu spread");
@@ -64,7 +64,7 @@ XYSeries series = new XYSeries("observation");
             } 
             System.out.println();
 
-//XYSeries series = new XYSeries("observation");
+XYSeries series = new XYSeries("observation");
             //observe flu patients
             for (int j = 0; j < total_buildings; j++) {
                 //each market participant whose residence is building 'j' observe flu patients
@@ -72,14 +72,16 @@ XYSeries series = new XYSeries("observation");
                     int market_participant = market_maker.buildings[j].participants[k]; //it is the index of market participant
                     //observe the flu patients of each building
                     for (int l = 0; l < total_buildings; l++){
-                        float observed_flu_rate = get_gaussian(market_maker.buildings[l].get_flu_population_rate(), 
-                                market_maker.buildings[j].residents[market_participant].observation_error_rate, 0, 1);
+//                        float observed_flu_rate = get_gaussian(market_maker.buildings[l].get_flu_population_rate(), 
+//                                market_maker.buildings[j].residents[market_participant].observation_error_rate, 0, 1);
+                          float observed_flu_rate = get_gaussian(market_maker.buildings[l].get_flu_population_rate(), 
+                                observation_gaussian_std_dev, 0, 1);                         
                         market_maker.buildings[j].residents[market_participant].observations[l].observed_flu_rate = observed_flu_rate;
 series.add(market_maker.buildings[l].get_flu_population_rate(), observed_flu_rate);
                     }
                 }
             }
-//ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
+ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
 //scatter.show_scatter();
   
 /*            
@@ -157,13 +159,13 @@ series.add(market_maker.buildings[l].get_flu_population_rate(), observed_flu_rat
         
         market_maker.sort_total_participants_money_decreasing_order();
         market_maker.show_total_participants();  
-        int number_people_division = 10;
-        market_maker.show_average_observation_error_rate(number_people_division);
-        market_maker.show_average_price_users_bought(number_people_division);
+//        int number_people_division = 10;
+//        market_maker.show_average_observation_error_rate(number_people_division);
+//        market_maker.show_average_price_users_bought(number_people_division);
         market_maker.show_GT_EGT();
         market_maker.show_euclidean_distance_of_GT_EGT();
-ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
-scatter.show_scatter();          
+//ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
+//scatter.show_scatter();          
     }
 
     //checks whether the sum of population in each state is equal to the total population

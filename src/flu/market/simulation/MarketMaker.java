@@ -65,7 +65,7 @@ public class MarketMaker {
         for (int j = 0; j < total_buildings; j++) {
             buildings[j] = new Building(j, total_population_per_building, market_participant_rate_per_building, initial_money_resident,
                     infection_rate, recovery_rate, time_scale, initial_population_S_per_building, initial_population_I_per_building, 
-                    initial_population_R_per_building, total_buildings, _maximum_observation_error_rate, _minimum_observation_error_rate);
+                    initial_population_R_per_building, total_buildings, _maximum_observation_error_rate, _minimum_observation_error_rate, total_days);
         }
 
         ground_truths = new float[total_days * total_buildings];
@@ -178,6 +178,7 @@ public class MarketMaker {
             return false;
         //update user's current money and shares
         buildings[buyer_building_id].residents[resident_id].money -= get_cost(market_date, security_group_id, quantity);
+        buildings[buyer_building_id].residents[resident_id].suggested_flu_population_rate[security_group_id] = flu_population_rate;
         buildings[buyer_building_id].residents[resident_id].add_share(share);
         //update market status
         security_groups[security_group_id].shares += quantity;
@@ -271,9 +272,12 @@ public class MarketMaker {
     public void show_total_participants(){
         System.out.println("This is the list of total participants in the market");
         for (Person total_participant : total_participants) {
+            
             System.out.println("Building: " + total_participant.residence + 
                     ", person id: " + total_participant.id + 
-                    ", money: " + total_participant.money);
+                    ", money: " + total_participant.money +
+                    ", euclidean distance: " + get_euclidean_distance(total_participant.suggested_flu_population_rate, ground_truths) +
+                    ", total quantities of share user bought: " + total_participant.get_total_quantities_share());
             /*
             System.out.println("Building: " + total_participant.residence + 
                     ", person id: " + total_participant.id + 
@@ -362,13 +366,23 @@ public class MarketMaker {
     }
     
     void show_euclidean_distance_of_GT_EGT(){
+        
+        System.out.println("The eucildean distance is " + get_euclidean_distance(ground_truths, estimated_ground_truths));
+        System.out.println();
+    }
+    
+    //get euclidean distance. size of two array 'a' and 'b' must be same
+    //if sizes are different it returns -1
+    float get_euclidean_distance(float[] a, float[] b){
+        if(a.length != b.length)
+            return -1;
+
+        int size = a.length;
         float euclidean_distance = 0;
-        int size = total_days * total_buildings;
         for( int i=0; i<size; i++){
-            euclidean_distance += Math.pow(ground_truths[i] - estimated_ground_truths[i], 2);
+            euclidean_distance += Math.pow(a[i] - b[i], 2);
         }
         euclidean_distance =  (float) Math.sqrt(euclidean_distance);
-        System.out.println("The eucildean distance is " + euclidean_distance);
-        System.out.println();
+        return euclidean_distance;
     }
 }

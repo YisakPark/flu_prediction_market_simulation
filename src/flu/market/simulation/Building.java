@@ -20,6 +20,7 @@ public class Building {
     Person[] residents;
     FluSpread flu_spread;
     int total_buildings;
+    int total_days;
     float maximum_observation_error_rate;
     float minimum_observation_error_rate;
     int number_market_participants;
@@ -34,13 +35,14 @@ public class Building {
     
     public Building(int _id, int _total_population, float _market_participant_rate, float _initial_money_resident, float _infection_rate, 
             float _recovery_rate, float _time_scale, int _population_S, int _population_I, int _population_R, int _total_buildings,
-            float _maximum_observation_error_rate, float _minimum_observation_error_rate){
+            float _maximum_observation_error_rate, float _minimum_observation_error_rate, int _total_days){
         id = _id;
         total_population = _total_population;
         market_participant_rate = _market_participant_rate;
         initial_money_resident = _initial_money_resident;
         flu_spread = new FluSpread(_infection_rate, _recovery_rate, _time_scale, _population_S, _population_I, _population_R, total_population);
         total_buildings = _total_buildings;
+        total_days = _total_days;
         maximum_observation_error_rate = _maximum_observation_error_rate;
         minimum_observation_error_rate = _minimum_observation_error_rate;
         number_market_participants = (int)(total_population*market_participant_rate);
@@ -52,7 +54,8 @@ public class Building {
         residents = new Person[total_population];
         for(int i=0; i < total_population; i++){
             float observation_accuracy = get_random_within_range(minimum_observation_error_rate, maximum_observation_error_rate);
-            residents[i] = new Person(i, id, false, health_state.S, initial_money_resident, observation_accuracy, total_buildings);
+            residents[i] = new Person(i, id, false, health_state.S, initial_money_resident, 
+                    observation_accuracy, total_buildings, total_days);
         }
         set_market_participants();
         set_end_index();

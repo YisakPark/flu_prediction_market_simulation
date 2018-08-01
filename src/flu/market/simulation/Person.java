@@ -19,10 +19,12 @@ public class Person {
     float money_earned_selling;
     float observation_error_rate;
     Observation[] observations;
+    float[] suggested_flu_population_rate;
     ArrayList<Share> share_list = new ArrayList<>();
     
     public Person(int _id, int _residence, boolean _market_participant, 
-            FluMarketSimulation.health_state _health_state, float _money, float _observation_error_rate, int _total_buildings){
+            FluMarketSimulation.health_state _health_state, float _money, 
+            float _observation_error_rate, int _total_buildings, int _total_days){
         id = _id;
         residence = _residence;
         market_participant = _market_participant;
@@ -31,6 +33,7 @@ public class Person {
         money_earned_selling = (float) 0;
         observation_error_rate = _observation_error_rate;
         observations = new Observation[_total_buildings];
+        suggested_flu_population_rate = new float[_total_buildings * _total_days];
         
         for(int i=0; i<_total_buildings; i++){
             observations[i] = new Observation(i, 0);
@@ -85,5 +88,14 @@ public class Person {
         money += payoff;
     }
     
-
+    int get_total_quantities_share(){
+        int total = 0;
+        Iterator<Share> itr = share_list.iterator();
+        
+        while(itr.hasNext()){
+            Share share = itr.next();
+            total += share.quantity;
+        }
+        return total;
+    }
 }
