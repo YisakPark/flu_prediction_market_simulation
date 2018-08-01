@@ -213,9 +213,8 @@ public class MarketMaker {
 
     //determines payoff per share
     public float payoff_per_share(float truth, float predicted_truth){
-        return (float) Math.exp(-Math.abs(truth - predicted_truth));
+        return (float) (Math.exp(-Math.abs(truth - predicted_truth)));
     }
-    
     
     //if it is true, payoff will be determined using EGT
     boolean determine_payoff_with_EGT(){
@@ -269,22 +268,68 @@ public class MarketMaker {
     }
     
     
-    public void show_total_participants(){
-        System.out.println("This is the list of total participants in the market");
-        for (Person total_participant : total_participants) {
+    public void show_betting_result(){
+        float dot_size = 1;
+        XYSeries series_money = new XYSeries("");
+        XYSeries series_price = new XYSeries("");
+        XYSeries series_euclidean = new XYSeries("");
+        XYSeries series_quantity = new XYSeries("");
+        XYSeries series_money_selling = new XYSeries("");
+        
+        
+        System.out.println("This is the result of the market");
+        for (int i=0; i<total_participants.length; i++) {
+            //get the average price of securities that user bought
+            float average_price = 0;
+            int quantity = 0;
+            for (int j=0; j<total_participants[i].share_list.size(); j++){
+                average_price += total_participants[i].share_list.get(j).price_of_security;
+                quantity += total_participants[i].share_list.get(j).quantity;
+            }
+            average_price = average_price / total_participants[i].share_list.size();
             
-            System.out.println("Building: " + total_participant.residence + 
-                    ", person id: " + total_participant.id + 
-                    ", money: " + total_participant.money +
-                    ", euclidean distance: " + get_euclidean_distance(total_participant.suggested_flu_population_rate, ground_truths) +
-                    ", total quantities of share user bought: " + total_participant.get_total_quantities_share());
+            series_money.add(i+1, total_participants[i].money);
+            series_price.add(i+1, average_price);
+            series_euclidean.add(i+1, get_euclidean_distance(total_participants[i].suggested_flu_population_rate, ground_truths));
+            series_quantity.add(i+1, quantity);   
+            series_money_selling.add(i+1, total_participants[i].money_earned_selling);
+        }   
+        
+        ScatterPlotter scatter_money = new ScatterPlotter("Money user earned",
+                "rank of user","money user earned",series_money, dot_size);
+        ScatterPlotter scatter_price = new ScatterPlotter("Average price of securities that user bought", 
+                "rank of user","average price",series_price, dot_size);
+        ScatterPlotter scatter_euclidean = new ScatterPlotter("euclidiean distance between the flu population rates that user predicted and the actual flu population rates",
+                "rank of user","euclidean distance", series_euclidean, dot_size);
+        ScatterPlotter scatter_quantity = new ScatterPlotter("total quantities of shares user bought",
+                "rank of user","total quantities of shares",series_quantity, dot_size);
+        ScatterPlotter scatter_money_selling = new ScatterPlotter("Sum of money user earned by selling shares",
+                "rank of user","money earned by selling",series_money_selling, dot_size);
+
+        scatter_money.show_scatter();
+        scatter_price.show_scatter();
+        scatter_euclidean.show_scatter();
+        scatter_quantity.show_scatter();
+        scatter_money_selling.show_scatter();
+
+        /*
+                System.out.println("Top " + (i+1) + " user information,\nmoney user earned: " + total_participants[i].money +
+                    ", average price of securities that user bought: " + average_price +
+                    ", euclidean distance between his predicted flu population rates and the actual flu population rates: " + 
+                    get_euclidean_distance(total_participants[i].suggested_flu_population_rate, ground_truths));
+ 
+            System.out.println("Building: " + total_participants[i].residence + 
+                    ", person id: " + total_participants[i].id + 
+                    ", money: " + total_participants[i].money +
+                    ", euclidean distance: " + get_euclidean_distance(total_participants[i].suggested_flu_population_rate, ground_truths) +
+                    ", total quantities of share user bought: " + total_participants[i].get_total_quantities_share());
+            */
             /*
             System.out.println("Building: " + total_participant.residence + 
                     ", person id: " + total_participant.id + 
                     ", money: " + total_participant.money +
                     ", money earned by selling shares: " + total_participant.money_earned_selling);
-            */
-        }
+            */        
         System.out.println();
     }
 
@@ -335,6 +380,7 @@ public class MarketMaker {
     
     //show ground truth and estimated ground truth
     void show_GT_EGT(){
+        /*
         int size = total_days * total_buildings;
         for( int i=0; i<size; i++){
             System.out.println("On the date " + security_groups[i].market_date +
@@ -342,13 +388,19 @@ public class MarketMaker {
                     ", the difference between the actual flu population rate and the mean of predicted flu population rate  was " 
                     + Math.abs(ground_truths[i] - estimated_ground_truths[i]));
         }
+        */
         System.out.println();
-        //XYSeries series = new XYSeries("observation");
-        //series.add(date, 0);
-        //ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
-        //scatter.show_scatter(); 
+        XYSeries series = new XYSeries("");
+        int size = total_days * total_buildings;
+        for( int i=0; i<size; i++){
+            series.add(ground_truths[i]*100, estimated_ground_truths[i]*100);
+        }
+        ScatterPlotter scatter = new ScatterPlotter("Comparison between the estimated flu population rate and the actual flu population rate",
+                "actual flu population rate (%)","estimated flu population rate (%)",series, (float) 1);
+        scatter.show_scatter(); 
         
     }
+    
     //pick the share whose price is the closest to 'price' among the share list of the person specified by 'building id' and 'resident_id'
     Share pick_share(int building_id, int resident_id, float price){
         Share picked_share = buildings[building_id].residents[resident_id].share_list.get(0);
@@ -367,7 +419,8 @@ public class MarketMaker {
     
     void show_euclidean_distance_of_GT_EGT(){
         
-        System.out.println("The eucildean distance is " + get_euclidean_distance(ground_truths, estimated_ground_truths));
+        System.out.println("The euclidean distance between the estimated flu population rates and the actual flu population rates is " + 
+                get_euclidean_distance(ground_truths, estimated_ground_truths));
         System.out.println();
     }
     

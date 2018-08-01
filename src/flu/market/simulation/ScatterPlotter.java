@@ -29,8 +29,8 @@ import org.jfree.data.xy.XYSeriesCollection;
 public class ScatterPlotter extends JFrame {
   private static final long serialVersionUID = 6294689542092367723L;
 
-  public ScatterPlotter(String x_axis, String y_axis, XYSeries series, float point_size) {
-    super("ScatterPlotter");
+  public ScatterPlotter(String title, String x_axis, String y_axis, XYSeries series, float point_size) {
+    super(title);
     
     XYSeriesCollection dataset = new XYSeriesCollection();
     dataset.addSeries(series);
@@ -38,7 +38,7 @@ public class ScatterPlotter extends JFrame {
 
     // Create chart
     JFreeChart chart = ChartFactory.createScatterPlot(
-        "Scatter Chart", 
+        title, 
         x_axis, y_axis, dataset);
 
     
