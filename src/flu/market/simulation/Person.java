@@ -66,7 +66,7 @@ public class Person {
         for(int i=0; i<size; i++){
             Share share = share_list.get(i);
             if(share.security_group_id == _share.security_group_id && share.flu_population_rate == _share.flu_population_rate){
-                share_list.get(i).quantity += _share.quantity;
+                share_list.get(i).quantity -= _share.quantity;
                 if(share_list.get(i).quantity == 0){
                     share_list.remove(i);
                 }

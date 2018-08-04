@@ -8,6 +8,7 @@ package flu.market.simulation;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import org.jfree.data.xy.XYSeries;
+import java.lang.Object;
 /**
  *
  * @author yisak
@@ -40,12 +41,15 @@ public class FluMarketSimulation {
         float EGT_rate = (float) 0.1; //must be [0,1], We need to determine the actual flu population rate of each building. 
                                     //But the estimated flu population rate will be determined instead for 
                                     //the buildings whose number is set by 'EGT_rate' * 'total_buildings' will 
-        float observation_gaussian_std_dev = (float) 0.1;      
+        float observation_gaussian_std_dev = (float) 0;      
         float security_flu_rate_gaussian_std_dev = (float) 0.1;
         float sell_price_gaussian_std_dev = (float) 0.1;
         float quantity_gaussian_mean = (float) 10;
         float quantity_gaussian_std_dev = (float) 2.4;
-        float date_gaussian_std_dev = (float) 2;
+        float date_gaussian_std_dev = (float) 0;
+
+//XYSeries series = new XYSeries("observation");
+        
 
         market_maker = new MarketMaker(total_buildings, total_days, liquidity_param, total_population_per_building, 
         market_participant_rate_per_building, initial_money_resident, infection_rate, recovery_rate, time_scale, 
@@ -81,7 +85,7 @@ public class FluMarketSimulation {
                     }
                 }
             }
-//ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
+//ScatterPlotter scatter = new ScatterPlotter("observation","flu population rate","observed flu population rate",series, (float) 0.1);
 //scatter.show_scatter();
   
 /*            
@@ -93,9 +97,10 @@ public class FluMarketSimulation {
                 }
             }
 */
-//XYSeries series = new XYSeries("observation");
             //buy shares
             for(int j=0; j<total_buildings; j++){
+//XYSeries series = new XYSeries("predicted flu rate");
+//XYSeries series = new XYSeries("date of market to choose when buying shares");
                 for(int k=0; k<market_maker.buildings[j].participants.length; k++){
                     //this loop iterates through market participants whose residence is building 'j'
                     int market_participant = market_maker.buildings[j].participants[k];
@@ -109,27 +114,33 @@ public class FluMarketSimulation {
                         
                         quantity = (int) get_gaussian(quantity_gaussian_mean, quantity_gaussian_std_dev);
                         market_maker.buy_process(security_group_id, quantity, flu_rate, j, market_participant);                      
-//series.add(date, 0);
+//series.add(observed_flu_rate, flu_rate);
+//series.add(i, date);
                     }
                 }
-            }
-//ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
+//ScatterPlotter scatter = new ScatterPlotter("predicted_flu_rate","observed_flu_rate","flu_rate",series, (float) 0.1);
+//ScatterPlotter scatter = new ScatterPlotter("date of market to choose when buying shares","date","selected date",series, (float) 0.1);
 //scatter.show_scatter();           
-
-            
+            }
+                        
             //selling shares
             for(int j=0; j<total_buildings; j++){
                 for(int k=0; k<market_maker.buildings[j].participants.length; k++){
                     //this loop iterates through market participants whose residence is building 'j'
                     int market_participant = market_maker.buildings[j].participants[k];
                     float price = get_gaussian(1, sell_price_gaussian_std_dev, 0, 1);
-                    Share share = market_maker.pick_share(j, market_participant, price);
-                    int quantity = get_rand_int(0, share.quantity);
-                    market_maker.sell_process(share.security_group_id, quantity, share.flu_population_rate,
-                            share.buyer_residence, share.buyer_resident_id);                    
+                    //pick the share whose security's price is the cloeset to 'price'
+                    if(market_maker.has_share(j, market_participant)){
+                        Share share = market_maker.pick_share(j, market_participant, price);
+                        int quantity = get_rand_int(0, share.quantity);
+                        market_maker.sell_process(share.security_group_id, quantity, share.flu_population_rate,
+                            share.buyer_residence, share.buyer_resident_id);                                            
+                    }
+                    else
+                        continue;
                 }
             }
-
+            
             
             //payoff
             for(int j=0; j<total_buildings; j++){
@@ -156,14 +167,14 @@ public class FluMarketSimulation {
             }
         }  
         
-        
-        market_maker.sort_total_participants_money_decreasing_order();
-        market_maker.show_betting_result();  
+        market_maker.write_csv_EGT_GT();
+//        market_maker.sort_total_participants_money_decreasing_order();
+//       market_maker.show_betting_result();  
 //        int number_people_division = 10;
 //        market_maker.show_average_observation_error_rate(number_people_division);
 //        market_maker.show_average_price_users_bought(number_people_division);
         market_maker.show_GT_EGT();
-        market_maker.show_euclidean_distance_of_GT_EGT();
+//        market_maker.show_euclidean_distance_of_GT_EGT();
 //ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
 //scatter.show_scatter();          
     }
@@ -185,7 +196,11 @@ public class FluMarketSimulation {
         
         return gaussian;
     }
-
+/*
+    public static float truncated_normal(float mean, float std_dev, float lower_bound, float upper_bound){
+        TruncatedNormalDistribution a;
+    }
+ */   
     //get gaussian random number bounded by ['lower_bound', 'upper_bound']
     public static float get_gaussian(float mean, float std_dev, float lower_bound, float upper_bound){
         Random rand = new Random();

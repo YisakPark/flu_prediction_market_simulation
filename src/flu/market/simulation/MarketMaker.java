@@ -5,7 +5,9 @@
  */
 package flu.market.simulation;
 
-import java.util.Iterator;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
 import org.jfree.data.xy.XYSeries;
 
 /**
@@ -170,8 +172,6 @@ public class MarketMaker {
     //buying the shares
     //return false, if the buying fails, otherwise true.
     public boolean buy_process(int security_group_id, int quantity, float flu_population_rate, int buyer_building_id, int resident_id){
-        Share share = new Share(security_group_id, buyer_building_id, resident_id, 
-                flu_population_rate, quantity, security_groups[security_group_id].price);
         int market_date = security_groups[security_group_id].market_date;
         //if quantity is <= 0 or buyer cannot affordable, return false
         if(quantity <= 0 || buildings[buyer_building_id].residents[resident_id].money < get_cost(market_date, security_group_id, quantity))
@@ -179,10 +179,14 @@ public class MarketMaker {
         //update user's current money and shares
         buildings[buyer_building_id].residents[resident_id].money -= get_cost(market_date, security_group_id, quantity);
         buildings[buyer_building_id].residents[resident_id].suggested_flu_population_rate[security_group_id] = flu_population_rate;
-        buildings[buyer_building_id].residents[resident_id].add_share(share);
+        buildings[buyer_building_id].residents[resident_id].add_share(
+                new Share(security_group_id, buyer_building_id, resident_id, 
+                flu_population_rate, quantity, security_groups[security_group_id].price));
         //update market status
         security_groups[security_group_id].shares += quantity;
-        security_groups[security_group_id].add_share(share);        
+        security_groups[security_group_id].add_share(
+                new Share(security_group_id, buyer_building_id, resident_id, 
+                flu_population_rate, quantity, security_groups[security_group_id].price));        
         update_price(market_date);
         return true;
     }
@@ -192,18 +196,20 @@ public class MarketMaker {
     */    
     //selling the shares
     public void sell_process(int security_group_id, int quantity, float flu_population_rate, int seller_building_id, int resident_id){
-        Share share = new Share(security_group_id, seller_building_id, resident_id, 
-                flu_population_rate, -quantity, security_groups[security_group_id].price);
         int market_date = security_groups[security_group_id].market_date;
         
         //update user's current money and shares
         float earned_money = get_cost(market_date, security_group_id, -quantity);
         buildings[seller_building_id].residents[resident_id].money += earned_money;
         buildings[seller_building_id].residents[resident_id].money_earned_selling += earned_money;
-        buildings[seller_building_id].residents[resident_id].remove_share(share);
-        //update market status
+        buildings[seller_building_id].residents[resident_id].remove_share(
+                new Share(security_group_id, seller_building_id, resident_id, 
+                flu_population_rate, quantity, security_groups[security_group_id].price));
+       //update market status
         security_groups[security_group_id].shares -= quantity;
-        security_groups[security_group_id].remove_share(share);
+        security_groups[security_group_id].remove_share(
+                new Share(security_group_id, seller_building_id, resident_id, 
+                flu_population_rate, quantity, security_groups[security_group_id].price));
         update_price(market_date);
     }
     
@@ -403,7 +409,7 @@ public class MarketMaker {
     
     //pick the share whose price is the closest to 'price' among the share list of the person specified by 'building id' and 'resident_id'
     Share pick_share(int building_id, int resident_id, float price){
-        Share picked_share = buildings[building_id].residents[resident_id].share_list.get(0);
+        Share picked_share = null;
         float price_difference = 1;
         Iterator<Share> itr = buildings[building_id].residents[resident_id].share_list.iterator();
         
@@ -437,5 +443,35 @@ public class MarketMaker {
         }
         euclidean_distance =  (float) Math.sqrt(euclidean_distance);
         return euclidean_distance;
+    }
+    
+    boolean has_share(int building_id, int resident_id){
+        return !buildings[building_id].residents[resident_id].share_list.isEmpty();     
+    }
+    
+    void write_csv_EGT_GT(){
+        String COMMA_DELIMITER = ",";
+        String NEW_LINE_SEPERATOR = "\n";
+        String FILE_HEADER = "Actual Flu Population,Estimated Flu Population";
+        
+        try{
+            FileWriter fileWriter = new FileWriter("EGT_GT.csv");
+            fileWriter.append(FILE_HEADER);
+            int size = (ground_truths.length==estimated_ground_truths.length) ? ground_truths.length : -1;
+            if(size == -1){
+                System.out.println("the size of the array 'ground_truths' is not equal to 'estimated_ground_truths'");
+                return;
+            }               
+            for(int i=0; i<size; i++){
+                fileWriter.append(NEW_LINE_SEPERATOR);
+                fileWriter.append(String.valueOf(ground_truths[i]*100));
+                fileWriter.append(COMMA_DELIMITER);
+                fileWriter.append(String.valueOf(estimated_ground_truths[i]*100));
+            }
+            fileWriter.flush();
+            fileWriter.close();
+        } catch (IOException e){
+            System.out.println(e.getMessage());
+        }
     }
 }

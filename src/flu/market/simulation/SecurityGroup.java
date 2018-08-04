@@ -33,7 +33,9 @@ public class SecurityGroup {
         
         for(int i=0; i<size; i++){
             Share share = share_list.get(i);
-            if(share.security_group_id == _share.security_group_id && share.flu_population_rate == _share.flu_population_rate){
+            if(share.buyer_residence == _share.buyer_residence &&
+                    share.buyer_resident_id == _share.buyer_resident_id &&
+                    share.flu_population_rate == _share.flu_population_rate){
                 share_list.get(i).quantity += _share.quantity;
                 return;
             }
@@ -50,7 +52,9 @@ public class SecurityGroup {
         
         for(int i=0; i<size; i++){
             Share share = share_list.get(i);
-            if(share.security_group_id == _share.security_group_id && share.flu_population_rate == _share.flu_population_rate){
+            if(share.buyer_residence == _share.buyer_residence &&
+                    share.buyer_resident_id == _share.buyer_resident_id &&
+                    share.flu_population_rate == _share.flu_population_rate){
                 share_list.get(i).quantity -= _share.quantity;
                 if(share_list.get(i).quantity == 0){
                     share_list.remove(i);
@@ -58,13 +62,13 @@ public class SecurityGroup {
                 return;
             }
         }
+        
     }
     
     //get the mean of the graph where x-axis is the flu population rate and y-axis is the quantity of share
     public float get_mean(){
         float sum = 0;
         int size = share_list.size();
-        
         for(int i=0; i<size; i++){
             sum += share_list.get(i).flu_population_rate * share_list.get(i).quantity;
         }            
@@ -88,5 +92,14 @@ public class SecurityGroup {
             return (float) Math.sqrt(sum / shares);
         else
             return 0;
+    }
+    
+    public boolean check_quantity(){
+        int quan = 0;
+        int size = share_list.size();
+        for(int i=0; i<size; i++){
+            quan += share_list.get(i).quantity;
+        }
+        return quan == shares;
     }
 }
