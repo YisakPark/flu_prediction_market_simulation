@@ -33,6 +33,8 @@ public class MarketMaker {
     float[] estimated_ground_truths;
     float EGT_rate; //must be within [0,1]
     Person[] total_participants;
+    EGT_statistic[] EGT_statistics;
+    float confidence_interval_multiplier;
     
     public MarketMaker(int _total_buildings, int _total_days, float _liquidity_param, int _total_population_per_building,
             float _market_participant_rate_per_building, float _initial_money_resident, float _infection_rate, float _recovery_rate,
@@ -89,6 +91,9 @@ public class MarketMaker {
                 i++;
             }
         }
+        
+        EGT_statistics = new EGT_statistic[total_days];
+        confidence_interval_multiplier = (float) 1.96; //assuming 95% CI
     }
 
 
@@ -177,11 +182,14 @@ public class MarketMaker {
         if(quantity <= 0 || buildings[buyer_building_id].residents[resident_id].money < get_cost(market_date, security_group_id, quantity))
             return false;
         //update user's current money and shares
-        buildings[buyer_building_id].residents[resident_id].money -= get_cost(market_date, security_group_id, quantity);
+        float cost = get_cost(market_date, security_group_id, quantity);
+        float money = buildings[buyer_building_id].residents[resident_id].money - cost;
+        buildings[buyer_building_id].residents[resident_id].setMoney(money);
         buildings[buyer_building_id].residents[resident_id].suggested_flu_population_rate[security_group_id] = flu_population_rate;
         buildings[buyer_building_id].residents[resident_id].add_share(
                 new Share(security_group_id, buyer_building_id, resident_id, 
                 flu_population_rate, quantity, security_groups[security_group_id].price));
+        buildings[buyer_building_id].residents[resident_id].money_lost_buying_share += cost;
         //update market status
         security_groups[security_group_id].shares += quantity;
         security_groups[security_group_id].add_share(
@@ -199,12 +207,13 @@ public class MarketMaker {
         int market_date = security_groups[security_group_id].market_date;
         
         //update user's current money and shares
-        float earned_money = get_cost(market_date, security_group_id, -quantity);
-        buildings[seller_building_id].residents[resident_id].money += earned_money;
-        buildings[seller_building_id].residents[resident_id].money_earned_selling += earned_money;
+        float cost = get_cost(market_date, security_group_id, -quantity);
+        float money = buildings[seller_building_id].residents[resident_id].money + cost;
+        buildings[seller_building_id].residents[resident_id].setMoney(money);        
         buildings[seller_building_id].residents[resident_id].remove_share(
                 new Share(security_group_id, seller_building_id, resident_id, 
                 flu_population_rate, quantity, security_groups[security_group_id].price));
+        buildings[seller_building_id].residents[resident_id].money_earned_selling_share += cost;
        //update market status
         security_groups[security_group_id].shares -= quantity;
         security_groups[security_group_id].remove_share(
@@ -219,7 +228,10 @@ public class MarketMaker {
 
     //determines payoff per share
     public float payoff_per_share(float truth, float predicted_truth){
-        return (float) (Math.exp(-Math.abs(truth - predicted_truth)));
+        float a = -Math.abs(truth - predicted_truth);
+        float b = (float) Math.exp(a);
+        
+        return (float) (Math.exp( (float) -Math.abs(truth - predicted_truth)));
     }
     
     //if it is true, payoff will be determined using EGT
@@ -280,7 +292,6 @@ public class MarketMaker {
         XYSeries series_price = new XYSeries("");
         XYSeries series_euclidean = new XYSeries("");
         XYSeries series_quantity = new XYSeries("");
-        XYSeries series_money_selling = new XYSeries("");
         
         
         System.out.println("This is the result of the market");
@@ -298,7 +309,6 @@ public class MarketMaker {
             series_price.add(i+1, average_price);
             series_euclidean.add(i+1, get_euclidean_distance(total_participants[i].suggested_flu_population_rate, ground_truths));
             series_quantity.add(i+1, quantity);   
-            series_money_selling.add(i+1, total_participants[i].money_earned_selling);
         }   
         
         ScatterPlotter scatter_money = new ScatterPlotter("Money user earned",
@@ -309,14 +319,11 @@ public class MarketMaker {
                 "rank of user","euclidean distance", series_euclidean, dot_size);
         ScatterPlotter scatter_quantity = new ScatterPlotter("total quantities of shares user bought",
                 "rank of user","total quantities of shares",series_quantity, dot_size);
-        ScatterPlotter scatter_money_selling = new ScatterPlotter("Sum of money user earned by selling shares",
-                "rank of user","money earned by selling",series_money_selling, dot_size);
 
         scatter_money.show_scatter();
         scatter_price.show_scatter();
         scatter_euclidean.show_scatter();
         scatter_quantity.show_scatter();
-        scatter_money_selling.show_scatter();
 
         /*
                 System.out.println("Top " + (i+1) + " user information,\nmoney user earned: " + total_participants[i].money +
@@ -399,7 +406,7 @@ public class MarketMaker {
         XYSeries series = new XYSeries("");
         int size = total_days * total_buildings;
         for( int i=0; i<size; i++){
-            series.add(ground_truths[i]*100, estimated_ground_truths[i]*100);
+            series.add(ground_truths[i], estimated_ground_truths[i]);
         }
         ScatterPlotter scatter = new ScatterPlotter("Comparison between the estimated flu population rate and the actual flu population rate",
                 "actual flu population rate (%)","estimated flu population rate (%)",series, (float) 1);
@@ -452,26 +459,98 @@ public class MarketMaker {
     void write_csv_EGT_GT(){
         String COMMA_DELIMITER = ",";
         String NEW_LINE_SEPERATOR = "\n";
-        String FILE_HEADER = "Actual Flu Population,Estimated Flu Population";
+        String FILE_HEADER = "Actual Flu Population,Estimated Flu Population Mean,ME";
         
         try{
             FileWriter fileWriter = new FileWriter("EGT_GT.csv");
             fileWriter.append(FILE_HEADER);
-            int size = (ground_truths.length==estimated_ground_truths.length) ? ground_truths.length : -1;
-            if(size == -1){
-                System.out.println("the size of the array 'ground_truths' is not equal to 'estimated_ground_truths'");
-                return;
-            }               
+            int size = total_days;              
             for(int i=0; i<size; i++){
                 fileWriter.append(NEW_LINE_SEPERATOR);
-                fileWriter.append(String.valueOf(ground_truths[i]*100));
+                fileWriter.append(String.valueOf(EGT_statistics[i].ground_truth));
                 fileWriter.append(COMMA_DELIMITER);
-                fileWriter.append(String.valueOf(estimated_ground_truths[i]*100));
+                fileWriter.append(String.valueOf(EGT_statistics[i].estimated_ground_truth_mean));
+                fileWriter.append(COMMA_DELIMITER);
+                fileWriter.append(String.valueOf(EGT_statistics[i].margin_of_error));
             }
             fileWriter.flush();
             fileWriter.close();
         } catch (IOException e){
             System.out.println(e.getMessage());
+        }
+    }
+  
+    void write_csv_money_tracers(int day_int){
+        String COMMA_DELIMITER = ",";
+        String NEW_LINE_SEPERATOR = "\n";
+        String day = String.valueOf(day_int);
+        
+        try{
+            FileWriter fileWriter = new FileWriter("money_tracers_day_" + day + ".csv");
+
+            //list the money of each user earned by selling shares
+            String FILE_HEADER = "rank,current money,money earned by selling shares,money earned by payoff,money lost by buying shares";        
+            fileWriter.append(FILE_HEADER);
+            int size = total_participants.length;              
+            for(int i=0; i<size; i++){
+             String deb;
+                fileWriter.append(NEW_LINE_SEPERATOR);
+                fileWriter.append(String.valueOf(i+1));
+                fileWriter.append(COMMA_DELIMITER);
+             deb = String.valueOf(total_participants[i].money);
+                fileWriter.append(String.valueOf(total_participants[i].money));
+                fileWriter.append(COMMA_DELIMITER);
+                fileWriter.append(String.valueOf(total_participants[i].money_earned_selling_share));
+                fileWriter.append(COMMA_DELIMITER);
+                fileWriter.append(String.valueOf(total_participants[i].money_earned_payoff));
+                fileWriter.append(COMMA_DELIMITER);
+                fileWriter.append(String.valueOf(total_participants[i].money_lost_buying_share));
+            }
+            fileWriter.append(NEW_LINE_SEPERATOR);
+            fileWriter.flush();            
+            fileWriter.close();
+        } catch (IOException e){
+            System.out.println(e.getMessage());
+        }
+        
+    }
+
+    
+    void calculate_EGT_statistics(){
+        float mean = 0;
+        float std_dev = 0;
+        float margin_of_error;//assuming 95% CI        
+        int idx;
+        
+        for(int i=0; i<total_days; i++){
+            idx = i*total_buildings;
+
+            for(int j=0; j<total_buildings; j++){
+                mean += estimated_ground_truths[idx + j];
+            }
+            mean /= total_buildings;
+
+            for(int j=0; j<total_buildings; j++){
+                std_dev += Math.pow(estimated_ground_truths[idx + j]-mean, 2);
+            }
+            std_dev /= total_buildings;
+            std_dev = (float) Math.sqrt(std_dev);
+
+            margin_of_error = (float) (confidence_interval_multiplier * std_dev / Math.sqrt(total_buildings));
+            
+            EGT_statistics[i] = new EGT_statistic(ground_truths[idx], mean, margin_of_error);
+        }
+    }
+    
+    void initialize_money_tracer(){
+        for(int i=0; i<total_buildings; i++){
+            int size = buildings[i].participants.length;
+            for(int j=0; j<size; j++){
+                int idx = buildings[i].participants[j];
+                buildings[i].residents[idx].money_earned_payoff = 0;
+                buildings[i].residents[idx].money_lost_buying_share = 0;
+                buildings[i].residents[idx].money_earned_selling_share = 0;
+            }
         }
     }
 }

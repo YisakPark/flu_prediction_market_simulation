@@ -16,11 +16,14 @@ public class Person {
     boolean market_participant;
     FluMarketSimulation.health_state health_state;
     float money;
-    float money_earned_selling;
     float observation_error_rate;
     Observation[] observations;
     float[] suggested_flu_population_rate;
     ArrayList<Share> share_list = new ArrayList<>();
+    //below are money tracers which show how user earn money in a day
+    float money_earned_selling_share;
+    float money_earned_payoff;
+    float money_lost_buying_share;
     
     public Person(int _id, int _residence, boolean _market_participant, 
             FluMarketSimulation.health_state _health_state, float _money, 
@@ -30,7 +33,6 @@ public class Person {
         market_participant = _market_participant;
         health_state = _health_state;
         money = _money;
-        money_earned_selling = (float) 0;
         observation_error_rate = _observation_error_rate;
         observations = new Observation[_total_buildings];
         suggested_flu_population_rate = new float[_total_buildings * _total_days];
@@ -38,6 +40,11 @@ public class Person {
         for(int i=0; i<_total_buildings; i++){
             observations[i] = new Observation(i, 0);
         }
+        
+        money_earned_selling_share = 0;
+        money_earned_payoff = 0;
+        money_lost_buying_share = 0;
+
     }
     
     //if there is a share in the 'share_list', which has same as arg 'share' except for quantity,
@@ -85,7 +92,8 @@ public class Person {
     }
     
     void give_payoff(float payoff){
-        money += payoff;
+        setMoney(money + payoff);
+        money_earned_payoff += payoff;
     }
     
     int get_total_quantities_share(){
@@ -97,5 +105,9 @@ public class Person {
             total += share.quantity;
         }
         return total;
+    }
+    
+    void setMoney(float _money){
+        money = _money;
     }
 }

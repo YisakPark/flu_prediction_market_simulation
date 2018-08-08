@@ -42,7 +42,7 @@ public class FluMarketSimulation {
                                     //But the estimated flu population rate will be determined instead for 
                                     //the buildings whose number is set by 'EGT_rate' * 'total_buildings' will 
         float observation_gaussian_std_dev = (float) 0;      
-        float security_flu_rate_gaussian_std_dev = (float) 0.1;
+        float security_flu_rate_gaussian_std_dev = (float) 5;
         float sell_price_gaussian_std_dev = (float) 0.1;
         float quantity_gaussian_mean = (float) 10;
         float quantity_gaussian_std_dev = (float) 2.4;
@@ -58,6 +58,9 @@ public class FluMarketSimulation {
        
 //XYSeries series = new XYSeries("observation");
         for (int i = 0; i < total_days; i++) {
+            //initialize money tracers of each user
+            market_maker.initialize_money_tracer();
+            
             //simulate disease spread
 //            System.out.println("This is the status of flu spread");
             for (int j = 0; j < total_buildings; j++) {
@@ -79,7 +82,7 @@ public class FluMarketSimulation {
 //                        float observed_flu_rate = get_gaussian(market_maker.buildings[l].get_flu_population_rate(), 
 //                                market_maker.buildings[j].residents[market_participant].observation_error_rate, 0, 1);
                           float observed_flu_rate = get_gaussian(market_maker.buildings[l].get_flu_population_rate(), 
-                                observation_gaussian_std_dev, 0, 1);                         
+                                observation_gaussian_std_dev, 0, 100);                         
                         market_maker.buildings[j].residents[market_participant].observations[l].observed_flu_rate = observed_flu_rate;
 //series.add(market_maker.buildings[l].get_flu_population_rate(), observed_flu_rate);
                     }
@@ -107,7 +110,7 @@ public class FluMarketSimulation {
                     for(int l=0; l<total_buildings; l++){
                         //bet on building 'l' of date 'date'
                         float observed_flu_rate = market_maker.buildings[j].residents[market_participant].observations[l].observed_flu_rate;
-                        float flu_rate = get_gaussian(observed_flu_rate, security_flu_rate_gaussian_std_dev, 0, 1);
+                        float flu_rate = get_gaussian(observed_flu_rate, security_flu_rate_gaussian_std_dev, 0, 100);
                         int quantity;
                         int date = (int) Math.floor(get_gaussian(i, date_gaussian_std_dev, i, total_days));
                         int security_group_id = market_maker.get_security_group_id(date, l);
@@ -136,8 +139,6 @@ public class FluMarketSimulation {
                         market_maker.sell_process(share.security_group_id, quantity, share.flu_population_rate,
                             share.buyer_residence, share.buyer_resident_id);                                            
                     }
-                    else
-                        continue;
                 }
             }
             
@@ -159,17 +160,20 @@ public class FluMarketSimulation {
                         payoff = share.quantity * market_maker.payoff_per_share(ground_truth, share.flu_population_rate);
                     }
                     market_maker.buildings[share.buyer_residence].residents[share.buyer_resident_id].give_payoff(payoff);
-                    market_maker.buildings[share.buyer_residence].residents[share.buyer_resident_id].give_payoff(payoff);
                 }
-            
+                
                 market_maker.estimated_ground_truths[security_group_id] = estimated_ground_truth;
                 market_maker.ground_truths[security_group_id] = ground_truth;            
             }
+            
+            market_maker.sort_total_participants_money_decreasing_order();
+            market_maker.write_csv_money_tracers(i);
         }  
         
+        market_maker.calculate_EGT_statistics();
         market_maker.write_csv_EGT_GT();
-//        market_maker.sort_total_participants_money_decreasing_order();
-//       market_maker.show_betting_result();  
+        market_maker.sort_total_participants_money_decreasing_order();
+        market_maker.show_betting_result();  
 //        int number_people_division = 10;
 //        market_maker.show_average_observation_error_rate(number_people_division);
 //        market_maker.show_average_price_users_bought(number_people_division);
