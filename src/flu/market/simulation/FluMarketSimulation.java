@@ -20,16 +20,16 @@ public class FluMarketSimulation {
     }
 
     public static void main(String[] args) {
-        int total_population_per_building = 100;
-        int initial_population_S_per_building = 99;
+        int total_population_per_building = 10;
+        int initial_population_S_per_building = 9;
         int initial_population_I_per_building = 1;
         int initial_population_R_per_building = 0;
         float initial_money_resident = 100;
         float market_participant_rate_per_building = (float) 0.3;
         validate_population(total_population_per_building, initial_population_S_per_building,
                 initial_population_I_per_building, initial_population_R_per_building);
-        float infection_rate = (float) 0.1;
-        float recovery_rate = (float) 2.14;
+        float infection_rate = (float) 3;
+        float recovery_rate = (float) 2.14;//2.14
         float time_scale = (float) 0.14;
         int total_buildings = 10;
         int total_days = 20;
@@ -56,21 +56,20 @@ public class FluMarketSimulation {
         initial_population_S_per_building, initial_population_I_per_building, initial_population_R_per_building,
         maximum_observation_error_rate, minimum_observation_error_rate, EGT_rate);
        
-//XYSeries series = new XYSeries("observation");
         for (int i = 0; i < total_days; i++) {
             //initialize money tracers of each user
             market_maker.initialize_money_tracer();
             
             //simulate disease spread
-//            System.out.println("This is the status of flu spread");
             for (int j = 0; j < total_buildings; j++) {
                 market_maker.buildings[j].update_SIR();
-//                System.out.println("Day: " + (i + 1) + ". Building: " +  j + ", S: " + market_maker.buildings[j].get_population_S() + ", I: " 
-//                        + market_maker.buildings[j].get_population_I() + ", R: "
-//                        + market_maker.buildings[j].get_population_R());
+                System.out.println("Day: " + (i + 1) + ". Building: " +  j + ", S: " + market_maker.buildings[j].get_population_S() + ", I: " 
+                        + market_maker.buildings[j].get_population_I() + ", R: "
+                        + market_maker.buildings[j].get_population_R());
             } 
-//            System.out.println();
+            System.out.println();
 
+/*
 //XYSeries series = new XYSeries("observation");
             //observe flu patients
             for (int j = 0; j < total_buildings; j++) {
@@ -90,7 +89,7 @@ public class FluMarketSimulation {
             }
 //ScatterPlotter scatter = new ScatterPlotter("observation","flu population rate","observed flu population rate",series, (float) 0.1);
 //scatter.show_scatter();
-  
+*/  
 /*            
             //print observation list of all market participant
             for (int j = 0; j < total_buildings; j++){
@@ -100,6 +99,7 @@ public class FluMarketSimulation {
                 }
             }
 */
+/*
             //buy shares
             for(int j=0; j<total_buildings; j++){
 //XYSeries series = new XYSeries("predicted flu rate");
@@ -181,6 +181,8 @@ public class FluMarketSimulation {
 //        market_maker.show_euclidean_distance_of_GT_EGT();
 //ScatterPlotter scatter = new ScatterPlotter("x","y",series, (float) 0.1);
 //scatter.show_scatter();          
+*/
+        }
     }
 
     //checks whether the sum of population in each state is equal to the total population
