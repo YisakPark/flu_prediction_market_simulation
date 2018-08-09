@@ -5,6 +5,8 @@
  */
 package flu.market.simulation;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
@@ -35,6 +37,8 @@ public class MarketMaker {
     Person[] total_participants;
     EGT_statistic[] EGT_statistics;
     float confidence_interval_multiplier;
+    float[][] contact_matrix;
+    Population[] populations;
     
     public MarketMaker(int _total_buildings, int _total_days, float _liquidity_param, int _total_population_per_building,
             float _market_participant_rate_per_building, float _initial_money_resident, float _infection_rate, float _recovery_rate,
@@ -63,13 +67,16 @@ public class MarketMaker {
         initial_population_S_per_building = _initial_population_S_per_building;
         initial_population_I_per_building = _initial_population_I_per_building;
         initial_population_R_per_building = _initial_population_R_per_building;        
+        initialize_contact_matrix();
+        initialize_population_arr();
         
         buildings = new Building[total_buildings];
         //initialize building objects
         for (int j = 0; j < total_buildings; j++) {
             buildings[j] = new Building(j, total_population_per_building, market_participant_rate_per_building, initial_money_resident,
                     infection_rate, recovery_rate, time_scale, initial_population_S_per_building, initial_population_I_per_building, 
-                    initial_population_R_per_building, total_buildings, _maximum_observation_error_rate, _minimum_observation_error_rate, total_days);
+                    initial_population_R_per_building, total_buildings, _maximum_observation_error_rate, _minimum_observation_error_rate, total_days,
+                    contact_matrix, populations);
         }
 
         ground_truths = new float[total_days * total_buildings];
@@ -94,8 +101,49 @@ public class MarketMaker {
         
         EGT_statistics = new EGT_statistic[total_days];
         confidence_interval_multiplier = (float) 1.96; //assuming 95% CI
+        
     }
 
+    private void initialize_contact_matrix(){
+        contact_matrix = new float[total_buildings][total_buildings];        
+        
+        Scanner scanIn;
+        int Rowc = 0;
+        int lineC = 0;
+        String InputLine;
+        String xfileLocation = "contact_matrix.csv";
+        
+        try{
+            scanIn = new Scanner(new BufferedReader(new FileReader(xfileLocation)));
+            
+            //check the number of line
+            while(scanIn.hasNextLine()){
+                lineC++;
+                scanIn.nextLine();
+            }
+            if(lineC != total_buildings){
+                System.out.println("The number of rows in contact matrix is wrong");
+                System.exit(0);                
+            }
+
+            scanIn = new Scanner(new BufferedReader(new FileReader(xfileLocation)));            
+            while(scanIn.hasNextLine()){
+                InputLine = scanIn.nextLine();
+                String[] InArray = InputLine.split(",");
+                
+                if(InArray.length != total_buildings){
+                    System.out.println("The number of columns in contact matrix is wrong");
+                    System.exit(0);
+                }
+                for(int x=0; x<InArray.length; x++){
+                    contact_matrix[Rowc][x] = Float.parseFloat(InArray[x]);
+                }
+                Rowc++;
+            }
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
 
 
     
@@ -459,19 +507,17 @@ public class MarketMaker {
     void write_csv_EGT_GT(){
         String COMMA_DELIMITER = ",";
         String NEW_LINE_SEPERATOR = "\n";
-        String FILE_HEADER = "Actual Flu Population,Estimated Flu Population Mean,ME";
+        String FILE_HEADER = "Actual Flu Population,Estimated Flu Population";
         
         try{
-            FileWriter fileWriter = new FileWriter("EGT_GT.csv");
+            FileWriter fileWriter = new FileWriter("./result/EGT_GT.csv");
             fileWriter.append(FILE_HEADER);
-            int size = total_days;              
+            int size = total_days * total_buildings;              
             for(int i=0; i<size; i++){
                 fileWriter.append(NEW_LINE_SEPERATOR);
-                fileWriter.append(String.valueOf(EGT_statistics[i].ground_truth));
+                fileWriter.append(String.valueOf(ground_truths[i]));
                 fileWriter.append(COMMA_DELIMITER);
-                fileWriter.append(String.valueOf(EGT_statistics[i].estimated_ground_truth_mean));
-                fileWriter.append(COMMA_DELIMITER);
-                fileWriter.append(String.valueOf(EGT_statistics[i].margin_of_error));
+                fileWriter.append(String.valueOf(estimated_ground_truths[i]));
             }
             fileWriter.flush();
             fileWriter.close();
@@ -486,7 +532,7 @@ public class MarketMaker {
         String day = String.valueOf(day_int);
         
         try{
-            FileWriter fileWriter = new FileWriter("money_tracers_day_" + day + ".csv");
+            FileWriter fileWriter = new FileWriter("./result/money_tracers_day_" + day + ".csv");
 
             //list the money of each user earned by selling shares
             String FILE_HEADER = "rank,current money,money earned by selling shares,money earned by payoff,money lost by buying shares";        
@@ -551,6 +597,14 @@ public class MarketMaker {
                 buildings[i].residents[idx].money_lost_buying_share = 0;
                 buildings[i].residents[idx].money_earned_selling_share = 0;
             }
+        }
+    }
+    
+    private void initialize_population_arr(){
+        populations = new Population[total_buildings];
+        
+        for(int i=0; i<populations.length; i++){
+            populations[i] = new Population(i, initial_population_I_per_building, total_population_per_building);
         }
     }
 }

@@ -33,15 +33,22 @@ public class Building {
     int end_of_S;
     int end_of_I;
     
+    float[][] contact_matrix;
+    Population[] populations;
+    
     public Building(int _id, int _total_population, float _market_participant_rate, float _initial_money_resident, float _infection_rate, 
             float _recovery_rate, float _time_scale, int _population_S, int _population_I, int _population_R, int _total_buildings,
-            float _maximum_observation_error_rate, float _minimum_observation_error_rate, int _total_days){
+            float _maximum_observation_error_rate, float _minimum_observation_error_rate, int _total_days, 
+            float[][] _contact_matrix, Population[] _populations){
         id = _id;
         total_population = _total_population;
         market_participant_rate = _market_participant_rate;
         initial_money_resident = _initial_money_resident;
-        flu_spread = new FluSpread(_infection_rate, _recovery_rate, _time_scale, _population_S, _population_I, _population_R, total_population);
+        contact_matrix = _contact_matrix;
+        populations = _populations;
         total_buildings = _total_buildings;
+        flu_spread = new FluSpread(_id, _infection_rate, _recovery_rate, _time_scale, _population_S, _population_I, _population_R, total_population,
+                total_buildings, contact_matrix, populations);
         total_days = _total_days;
         maximum_observation_error_rate = _maximum_observation_error_rate;
         minimum_observation_error_rate = _minimum_observation_error_rate;
@@ -128,6 +135,6 @@ public class Building {
     
     public float get_flu_population_rate(){
         //those are integers
-        return (float) flu_spread.population_I / total_population * 100;
+        return flu_spread.population_I / (float) total_population * 100;
     }
 }
