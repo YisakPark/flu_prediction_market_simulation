@@ -15,6 +15,7 @@ public class Person {
     int residence;
     boolean market_participant;
     FluMarketSimulation.health_state health_state;
+    FluMarketSimulation.market_participant_type market_participant_type;
     float money;
     float observation_error_rate;
     Observation[] observations;
@@ -26,12 +27,13 @@ public class Person {
     float money_lost_buying_share;
     
     public Person(int _id, int _residence, boolean _market_participant, 
-            FluMarketSimulation.health_state _health_state, float _money, 
-            float _observation_error_rate, int _total_buildings, int _total_days){
+            FluMarketSimulation.health_state _health_state, FluMarketSimulation.market_participant_type _market_participant_type,
+            float _money, float _observation_error_rate, int _total_buildings, int _total_days){
         id = _id;
         residence = _residence;
         market_participant = _market_participant;
         health_state = _health_state;
+        market_participant_type = _market_participant_type;
         money = _money;
         observation_error_rate = _observation_error_rate;
         observations = new Observation[_total_buildings];

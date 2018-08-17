@@ -20,6 +20,11 @@ public class FluMarketSimulation {
     public static enum health_state {
         S, I, R
     }
+    
+    public static enum market_participant_type{
+        N, ACCURATE, INACCURATE, PAST_RECORD
+    } //N: not participant, ACCURATE: accurate observation participant,
+      //INACCURATE: inaccruate observation participant, PAST_RECORD: participant using past record
 
     public static void main(String[] args) {
         int total_population_per_building = 400;
@@ -28,6 +33,9 @@ public class FluMarketSimulation {
         int initial_population_R_per_building = 0;
         float initial_money_resident = 100;
         float market_participant_rate_per_building = (float) 0.3;
+        float accurate_observation_participant_rate_per_building = (float) 0.1;
+        float inaccurate_observation_participant_rate_per_building = (float) 0.1;
+        float past_record_participant_rate_per_building = (float) 0.1;
         validate_population(total_population_per_building, initial_population_S_per_building,
                 initial_population_I_per_building, initial_population_R_per_building);
         float infection_rate = (float) 3;
@@ -43,19 +51,21 @@ public class FluMarketSimulation {
         float EGT_rate = (float) 0.1; //must be [0,1], We need to determine the actual flu population rate of each building. 
                                     //But the estimated flu population rate will be determined instead for 
                                     //the buildings whose number is set by 'EGT_rate' * 'total_buildings' will 
-        float observation_gaussian_std_dev = (float) 0;      
+        float accurate_observation_gaussian_std_dev = (float) 0;      
+        float inaccurate_observation_gaussian_std_dev = (float) 5;      
+        float past_record_gaussian_std_dev = (float) 5;              
         float security_flu_rate_gaussian_std_dev = (float) 3;
         float sell_price_gaussian_std_dev = (float) 0.1;
         float quantity_gaussian_mean = (float) 10; 
         float quantity_gaussian_std_dev = (float) 2.4;
         float date_gaussian_std_dev = (float) 0;
-        
 
 //XYSeries series = new XYSeries("observation");
         
 
         market_maker = new MarketMaker(total_buildings, total_days, liquidity_param, total_population_per_building, 
-        market_participant_rate_per_building, initial_money_resident, infection_rate, recovery_rate, time_scale, 
+        accurate_observation_participant_rate_per_building, inaccurate_observation_participant_rate_per_building, 
+        past_record_participant_rate_per_building, initial_money_resident, infection_rate, recovery_rate, time_scale, 
         initial_population_S_per_building, initial_population_I_per_building, initial_population_R_per_building,
         maximum_observation_error_rate, minimum_observation_error_rate, EGT_rate);
        
@@ -81,8 +91,27 @@ public class FluMarketSimulation {
                     int market_participant = market_maker.buildings[j].participants[k]; //it is the index of market participant
                     //observe the flu patients of each building
                     for (int l = 0; l < total_buildings; l++){
-                          float observed_flu_rate = get_gaussian(market_maker.buildings[l].get_flu_population_rate(), 
-                                observation_gaussian_std_dev, 0, 100);                         
+                        float observed_flu_rate = 0;
+                        switch(market_maker.buildings[j].residents[market_participant].market_participant_type){
+                            case ACCURATE:
+                                observed_flu_rate = get_gaussian(market_maker.buildings[l].get_flu_population_rate(), 
+                                                                 accurate_observation_gaussian_std_dev, 0, 100);                                                     
+                                break;
+                            case INACCURATE:
+                                observed_flu_rate = get_gaussian(market_maker.buildings[l].get_flu_population_rate(), 
+                                                                 inaccurate_observation_gaussian_std_dev, 0, 100);                                                     
+                                break;
+                            case PAST_RECORD:
+                                //if the day is first day, skip observation
+                                if(i == 0) continue;
+              
+                                float yesterday_flu_rate;
+                                int security_id = market_maker.get_security_group_id(i-1, l);
+                                yesterday_flu_rate = market_maker.ground_truths[security_id];                                
+                                observed_flu_rate = get_gaussian(yesterday_flu_rate, past_record_gaussian_std_dev, 0, 100);                                                     
+                                break;                           
+                                
+                        }
                         market_maker.buildings[j].residents[market_participant].observations[l].observed_flu_rate = observed_flu_rate;
 //series.add(market_maker.buildings[l].get_flu_population_rate(), observed_flu_rate);
                     }
@@ -107,13 +136,22 @@ public class FluMarketSimulation {
                 for(int k=0; k<market_maker.buildings[j].participants.length; k++){
                     //this loop iterates through market participants whose residence is building 'j'
                     int market_participant = market_maker.buildings[j].participants[k];
+                    
+                    //if the day is first day and the type of market participant is 'PAST_RECORD', they don't buy anything
+                    if(market_maker.buildings[j].residents[market_participant].market_participant_type == market_participant_type.PAST_RECORD &&
+                       i == 0)
+                        continue;
+                    
                     for(int l=0; l<total_buildings; l++){
                         //bet on building 'l' of date 'date'
                         float observed_flu_rate = market_maker.buildings[j].residents[market_participant].observations[l].observed_flu_rate;
+//                        float flu_rate = get_gaussian(observed_flu_rate, security_flu_rate_gaussian_std_dev, 0, 100);
                         float flu_rate = get_gaussian(observed_flu_rate, security_flu_rate_gaussian_std_dev, 0, 100);
                         int quantity;
                         int date = (int) Math.floor(get_gaussian(i, date_gaussian_std_dev, i, total_days));
                         int security_group_id = market_maker.get_security_group_id(date, l);
+                        
+                        
                         
                         quantity = (int) get_gaussian(quantity_gaussian_mean, quantity_gaussian_std_dev);
                         market_maker.record_suggested_flu_population_rate(j, market_participant, l, flu_rate);
@@ -127,7 +165,8 @@ public class FluMarketSimulation {
 //ScatterPlotter scatter = new ScatterPlotter("date of market to choose when buying shares","date","selected date",series, (float) 0.1);
 //scatter.show_scatter();           
             }
-                        
+
+/*            
             //selling shares
             for(int j=0; j<total_buildings; j++){
                 for(int k=0; k<market_maker.buildings[j].participants.length; k++){
@@ -147,7 +186,7 @@ public class FluMarketSimulation {
                     }
                 }
             }
-            
+*/            
             
             //payoff
             for(int j=0; j<total_buildings; j++){
@@ -173,7 +212,7 @@ public class FluMarketSimulation {
             }
             
             market_maker.sort_total_participants_money_decreasing_order();
-            market_maker.write_user_performance(i);
+            market_maker.write_csv_user_performance(i);
             
             //record the population information of each building
             for(int j=0; j<total_buildings; j++){

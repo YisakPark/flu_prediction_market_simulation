@@ -23,7 +23,10 @@ public class MarketMaker {
     SecurityGroup[] security_groups; //index of security group of array is the id of the security group
     Building[] buildings;
     int total_population_per_building;
-    float market_participant_rate_per_building;
+//    float market_participant_rate_per_building;
+    float accurate_observation_participant_rate_per_building;
+    float inaccurate_observation_participant_rate_per_building;
+    float past_record_participant_rate_per_building;
     float initial_money_resident;
     float infection_rate;
     float recovery_rate;
@@ -42,7 +45,8 @@ public class MarketMaker {
     Population[] populations;
     
     public MarketMaker(int _total_buildings, int _total_days, float _liquidity_param, int _total_population_per_building,
-            float _market_participant_rate_per_building, float _initial_money_resident, float _infection_rate, float _recovery_rate,
+            float _accurate_observation_participant_rate_per_building, float _inaccurate_observation_participant_rate_per_building,
+            float _past_record_participant_rate_per_building, float _initial_money_resident, float _infection_rate, float _recovery_rate,
             float _time_scale, int _initial_population_S_per_building, int _initial_population_I_per_building, int _initial_population_R_per_building,
             float _maximum_observation_error_rate, float _minimum_observation_error_rate, float _EGT_rate){
         total_buildings = _total_buildings;
@@ -60,7 +64,10 @@ public class MarketMaker {
         }
         
         total_population_per_building = _total_population_per_building;
-        market_participant_rate_per_building = _market_participant_rate_per_building;
+//        market_participant_rate_per_building = _market_participant_rate_per_building;
+        accurate_observation_participant_rate_per_building = _accurate_observation_participant_rate_per_building;
+        inaccurate_observation_participant_rate_per_building = _inaccurate_observation_participant_rate_per_building;
+        past_record_participant_rate_per_building = _past_record_participant_rate_per_building;
         initial_money_resident = _initial_money_resident;
         infection_rate = _infection_rate;
         recovery_rate = _recovery_rate;
@@ -74,10 +81,12 @@ public class MarketMaker {
         buildings = new Building[total_buildings];
         //initialize building objects
         for (int j = 0; j < total_buildings; j++) {
-            buildings[j] = new Building(j, total_population_per_building, market_participant_rate_per_building, initial_money_resident,
-                    infection_rate, recovery_rate, time_scale, initial_population_S_per_building, initial_population_I_per_building, 
-                    initial_population_R_per_building, total_buildings, _maximum_observation_error_rate, _minimum_observation_error_rate, total_days,
-                    contact_matrix, populations);
+            buildings[j] = new Building(j, total_population_per_building, accurate_observation_participant_rate_per_building,
+                inaccurate_observation_participant_rate_per_building, past_record_participant_rate_per_building,
+                initial_money_resident,infection_rate, recovery_rate, time_scale, 
+                initial_population_S_per_building, initial_population_I_per_building,initial_population_R_per_building,
+                total_buildings, _maximum_observation_error_rate, _minimum_observation_error_rate, total_days,
+                contact_matrix, populations);
         }
 
         ground_truths = new float[total_days * total_buildings];
@@ -560,7 +569,7 @@ public class MarketMaker {
         }
     }
   
-    void write_user_performance(int day_int){
+    void write_csv_user_performance(int day_int){
         String COMMA_DELIMITER = ",";
         String NEW_LINE_SEPERATOR = "\n";
         String day = String.valueOf(day_int);

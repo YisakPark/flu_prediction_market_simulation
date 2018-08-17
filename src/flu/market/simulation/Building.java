@@ -6,6 +6,7 @@
 package flu.market.simulation;
 
 import flu.market.simulation.FluMarketSimulation.health_state;
+import flu.market.simulation.FluMarketSimulation.market_participant_type;
 import java.util.*;
 import javafx.scene.chart.XYChart;
 import org.jfree.data.xy.XYSeries;
@@ -18,7 +19,13 @@ public class Building {
     int id;
     int total_population;
     float initial_money_resident;
-    float market_participant_rate;
+//    float market_participant_rate;
+    float accurate_observation_participant_rate;
+    float inaccurate_observation_participant_rate;
+    float past_record_participant_rate;
+    int number_accurate_participants;
+    int number_inaccurate_participants;
+    int number_past_record_participants;
     Person[] residents;
     FluSpread flu_spread;
     int total_buildings;
@@ -39,13 +46,18 @@ public class Building {
     Population[] populations;
     PopulationRate[] population_rates; //it records the population rates of S,I,R of everyday
     
-    public Building(int _id, int _total_population, float _market_participant_rate, float _initial_money_resident, float _infection_rate, 
-            float _recovery_rate, float _time_scale, int _population_S, int _population_I, int _population_R, int _total_buildings,
+    public Building(int _id, int _total_population, float _accurate_observation_participant_rate, 
+            float _inaccurate_observation_participant_rate, float _past_record_participant_rate,
+            float _initial_money_resident, float _infection_rate, float _recovery_rate,
+            float _time_scale, int _population_S, int _population_I, int _population_R, int _total_buildings,
             float _maximum_observation_error_rate, float _minimum_observation_error_rate, int _total_days, 
             float[][] _contact_matrix, Population[] _populations){
         id = _id;
         total_population = _total_population;
-        market_participant_rate = _market_participant_rate;
+//        market_participant_rate = _market_participant_rate;
+        accurate_observation_participant_rate = _accurate_observation_participant_rate;
+        inaccurate_observation_participant_rate = _inaccurate_observation_participant_rate;
+        past_record_participant_rate = _past_record_participant_rate;
         initial_money_resident = _initial_money_resident;
         contact_matrix = _contact_matrix;
         populations = _populations;
@@ -55,7 +67,13 @@ public class Building {
         total_days = _total_days;
         maximum_observation_error_rate = _maximum_observation_error_rate;
         minimum_observation_error_rate = _minimum_observation_error_rate;
-        number_market_participants = (int)(total_population*market_participant_rate);
+//        number_market_participants = (int)(total_population*market_participant_rate);
+        number_accurate_participants = (int)(total_population*accurate_observation_participant_rate);
+        number_inaccurate_participants = (int)(total_population*inaccurate_observation_participant_rate);
+        number_past_record_participants = (int)(total_population*past_record_participant_rate);
+        number_market_participants = number_accurate_participants +
+                                     number_inaccurate_participants +
+                                     number_past_record_participants;
         initialize_residents();
         population_rates = new PopulationRate[total_days];
     }
@@ -65,7 +83,7 @@ public class Building {
         residents = new Person[total_population];
         for(int i=0; i < total_population; i++){
             float observation_accuracy = get_random_within_range(minimum_observation_error_rate, maximum_observation_error_rate);
-            residents[i] = new Person(i, id, false, health_state.S, initial_money_resident, 
+            residents[i] = new Person(i, id, false, health_state.S, market_participant_type.N, initial_money_resident, 
                     observation_accuracy, total_buildings, total_days);
         }
         set_market_participants();
@@ -86,13 +104,46 @@ public class Building {
     //set market participant according to participant rate
     private void set_market_participants(){
         //get random number without duplication
-        int count_market_participants = 0;
+        int count = 0;
         
         participants = new int[number_market_participants];
         
         Random ran = new Random();
         
-        while(count_market_participants < number_market_participants){
+        //assign accurate observation participants
+        for(int i=0; i<number_accurate_participants; i++){
+            int nxt = ran.nextInt(total_population-1);
+            while(residents[nxt].market_participant_type != market_participant_type.N){
+                nxt = ran.nextInt(total_population-1);
+            }
+            residents[nxt].market_participant_type = market_participant_type.ACCURATE;
+            participants[count] = nxt;
+            count++;
+        }
+        
+        //assign accurate observation participants
+        for(int i=0; i<number_inaccurate_participants; i++){
+            int nxt = ran.nextInt(total_population-1);
+            while(residents[nxt].market_participant_type != market_participant_type.N){
+                nxt = ran.nextInt(total_population-1);
+            }
+            residents[nxt].market_participant_type = market_participant_type.INACCURATE;
+            participants[count] = nxt;
+            count++;
+        }
+   
+        //assign accurate observation participants
+        for(int i=0; i<number_past_record_participants; i++){
+            int nxt = ran.nextInt(total_population-1);
+            while(residents[nxt].market_participant_type != market_participant_type.N){
+                nxt = ran.nextInt(total_population-1);
+            }
+            residents[nxt].market_participant_type = market_participant_type.PAST_RECORD;
+            participants[count] = nxt;
+            count++;
+        }
+        /*
+        while(count < number_market_participants){
             //get random number [0, total_population-1]
             int nxt = ran.nextInt(total_population-1);
             //set nxt to indicate the person who is not market_participant
@@ -100,9 +151,10 @@ public class Building {
                 nxt = ran.nextInt(total_population-1);
             residents[nxt].market_participant = true;
             //add index which indicates market participant to the 'participants'
-            participants[count_market_participants] = nxt;
-            count_market_participants++;
+            participants[count] = nxt;
+            count++;
         }
+ */
     }
     
     //change the state of people following the parameters
