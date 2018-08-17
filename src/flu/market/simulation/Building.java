@@ -7,6 +7,8 @@ package flu.market.simulation;
 
 import flu.market.simulation.FluMarketSimulation.health_state;
 import java.util.*;
+import javafx.scene.chart.XYChart;
+import org.jfree.data.xy.XYSeries;
 
 /**
  *
@@ -35,6 +37,7 @@ public class Building {
     
     float[][] contact_matrix;
     Population[] populations;
+    PopulationRate[] population_rates; //it records the population rates of S,I,R of everyday
     
     public Building(int _id, int _total_population, float _market_participant_rate, float _initial_money_resident, float _infection_rate, 
             float _recovery_rate, float _time_scale, int _population_S, int _population_I, int _population_R, int _total_buildings,
@@ -54,6 +57,7 @@ public class Building {
         minimum_observation_error_rate = _minimum_observation_error_rate;
         number_market_participants = (int)(total_population*market_participant_rate);
         initialize_residents();
+        population_rates = new PopulationRate[total_days];
     }
 
     
@@ -137,4 +141,62 @@ public class Building {
         //those are integers
         return flu_spread.population_I / (float) total_population * 100;
     }
+    
+    void record_population(int day, float estimated_flu_population_rate){
+        population_rates[day] = new PopulationRate(day, flu_spread.get_S_rate(),
+                flu_spread.get_I_rate(), flu_spread.get_R_rate(), estimated_flu_population_rate);
+    }
+/*
+    XYChart.Series get_S_series(){
+        XYChart.Series series = new XYChart.Series(); 
+        series.setName("population rate of 'S' group"); 
+        for(int i=0; i<total_days; i++){
+            if(population_rates[i] == null){
+                System.out.println("Population rates are not recorded");
+                System.exit(0);
+            }
+            series.getData().add(new XYChart.Data(population_rates[i].S_population_rate, population_rates[i].day));    
+        }
+        return series;
+    }
+
+    XYChart.Series get_I_series(){
+        XYChart.Series series = new XYChart.Series(); 
+        series.setName("population rate of 'I' group"); 
+        for(int i=0; i<total_days; i++){
+            if(population_rates[i] == null){
+                System.out.println("Population rates are not recorded");
+                System.exit(0);
+            }
+            series.getData().add(new XYChart.Data(population_rates[i].I_population_rate, population_rates[i].day));    
+        }
+        return series;
+    }
+    
+    XYChart.Series get_R_series(){
+        XYChart.Series series = new XYChart.Series(); 
+        series.setName("population rate of 'R' group"); 
+        for(int i=0; i<total_days; i++){
+            if(population_rates[i] == null){
+                System.out.println("Population rates are not recorded");
+                System.exit(0);
+            }
+            series.getData().add(new XYChart.Data(population_rates[i].R_population_rate, population_rates[i].day));    
+        }
+        return series;
+    }
+
+    XYChart.Series get_estimated_flu_rate_series(){
+        XYChart.Series series = new XYChart.Series(); 
+        series.setName("estimated flu population rate"); 
+        for(int i=0; i<total_days; i++){
+            if(population_rates[i] == null){
+                System.out.println("Population rates are not recorded");
+                System.exit(0);
+            }
+            series.getData().add(new XYChart.Data(population_rates[i].estimated_flu_population_rate, population_rates[i].day));    
+        }
+        return series;
+    }    
+*/
 }

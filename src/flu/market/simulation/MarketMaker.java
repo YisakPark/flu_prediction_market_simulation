@@ -33,6 +33,7 @@ public class MarketMaker {
     int initial_population_R_per_building;
     float[] ground_truths; //'ground_truth[x]' is the actual flu patient ratio of the building on the date specified by 'x' which is security group id.
     float[] estimated_ground_truths;
+    float[] actual_flu_rate; //it stores actual flu rate of each building on a day
     float EGT_rate; //must be within [0,1]
     Person[] total_participants;
     EGT_statistic[] EGT_statistics;
@@ -101,6 +102,7 @@ public class MarketMaker {
         
         EGT_statistics = new EGT_statistic[total_days];
         confidence_interval_multiplier = (float) 1.96; //assuming 95% CI
+        actual_flu_rate = new float[total_buildings];
         
     }
 
@@ -233,7 +235,6 @@ public class MarketMaker {
         float cost = get_cost(market_date, security_group_id, quantity);
         float money = buildings[buyer_building_id].residents[resident_id].money - cost;
         buildings[buyer_building_id].residents[resident_id].setMoney(money);
-        buildings[buyer_building_id].residents[resident_id].suggested_flu_population_rate[security_group_id] = flu_population_rate;
         buildings[buyer_building_id].residents[resident_id].add_share(
                 new Share(security_group_id, buyer_building_id, resident_id, 
                 flu_population_rate, quantity, security_groups[security_group_id].price));
@@ -463,16 +464,18 @@ public class MarketMaker {
     }
     
     //pick the share whose price is the closest to 'price' among the share list of the person specified by 'building id' and 'resident_id'
-    Share pick_share(int building_id, int resident_id, float price){
+    Share pick_share(int date, int building_id, int resident_id, float price){
         Share picked_share = null;
         float price_difference = 1;
         Iterator<Share> itr = buildings[building_id].residents[resident_id].share_list.iterator();
         
         while(itr.hasNext()){
             Share share = itr.next();
-            if(price_difference >= Math.abs(security_groups[share.security_group_id].price - price)){
-                price_difference = Math.abs(security_groups[share.security_group_id].price - price);
-                picked_share = share;
+            if(security_groups[share.security_group_id].market_date >= date){
+                if(price_difference >= Math.abs(security_groups[share.security_group_id].price - price)){
+                    price_difference = Math.abs(security_groups[share.security_group_id].price - price);
+                    picked_share = share;
+                }
             }
         }
         return picked_share;
@@ -525,8 +528,39 @@ public class MarketMaker {
             System.out.println(e.getMessage());
         }
     }
+    
+    void write_csv_population_rates(){
+        String COMMA_DELIMITER = ",";
+        String NEW_LINE_SEPERATOR = "\n";
+        String FILE_HEADER = "day,S population rate,I population rate,R population rate,estimated flu population rate";
+        
+        try{
+            for(int i=0; i<total_buildings; i++){
+                String FILE_NAME = "../JavaFX_simulation/result/population_rates_building_" + i + ".csv";
+                FileWriter fileWriter = new FileWriter(FILE_NAME);
+                fileWriter.append(FILE_HEADER);
+                int size = total_days;              
+                for(int j=0; j<size; j++){
+                    fileWriter.append(NEW_LINE_SEPERATOR);
+                    fileWriter.append(String.valueOf(buildings[i].population_rates[j].day));
+                    fileWriter.append(COMMA_DELIMITER);
+                    fileWriter.append(String.valueOf(buildings[i].population_rates[j].S_population_rate));
+                    fileWriter.append(COMMA_DELIMITER);
+                    fileWriter.append(String.valueOf(buildings[i].population_rates[j].I_population_rate));
+                    fileWriter.append(COMMA_DELIMITER);
+                    fileWriter.append(String.valueOf(buildings[i].population_rates[j].R_population_rate));
+                    fileWriter.append(COMMA_DELIMITER);
+                    fileWriter.append(String.valueOf(buildings[i].population_rates[j].estimated_flu_population_rate));
+                }
+                fileWriter.flush();
+                fileWriter.close();
+            }
+        } catch (IOException e){
+            System.out.println(e.getMessage());
+        }
+    }
   
-    void write_csv_money_tracers(int day_int){
+    void write_user_performance(int day_int){
         String COMMA_DELIMITER = ",";
         String NEW_LINE_SEPERATOR = "\n";
         String day = String.valueOf(day_int);
@@ -535,7 +569,7 @@ public class MarketMaker {
             FileWriter fileWriter = new FileWriter("./result/money_tracers_day_" + day + ".csv");
 
             //list the money of each user earned by selling shares
-            String FILE_HEADER = "rank,current money,money earned by selling shares,money earned by payoff,money lost by buying shares";        
+            String FILE_HEADER = "rank,current money,money earned by selling shares,money earned by payoff,money lost by buying shares,euclidean distance";        
             fileWriter.append(FILE_HEADER);
             int size = total_participants.length;              
             for(int i=0; i<size; i++){
@@ -551,6 +585,8 @@ public class MarketMaker {
                 fileWriter.append(String.valueOf(total_participants[i].money_earned_payoff));
                 fileWriter.append(COMMA_DELIMITER);
                 fileWriter.append(String.valueOf(total_participants[i].money_lost_buying_share));
+                fileWriter.append(COMMA_DELIMITER);
+                fileWriter.append(String.valueOf(get_euclidean_distance(total_participants[i].suggested_flu_population_rate, actual_flu_rate)));
             }
             fileWriter.append(NEW_LINE_SEPERATOR);
             fileWriter.flush();            
@@ -606,5 +642,14 @@ public class MarketMaker {
         for(int i=0; i<populations.length; i++){
             populations[i] = new Population(i, initial_population_I_per_building, total_population_per_building);
         }
+    }
+    
+    //'building_id': the building id that user want to bet on
+    void record_suggested_flu_population_rate(int residence_id, int resident_id, int building_id, float flu_rate){
+        buildings[residence_id].residents[resident_id].suggested_flu_population_rate[building_id] = flu_rate;
+    }
+    
+    void record_actual_flu_population_rate(int building_id, float flu_rate){
+        actual_flu_rate[building_id] = flu_rate;
     }
 }

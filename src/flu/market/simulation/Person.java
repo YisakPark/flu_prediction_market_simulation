@@ -35,7 +35,7 @@ public class Person {
         money = _money;
         observation_error_rate = _observation_error_rate;
         observations = new Observation[_total_buildings];
-        suggested_flu_population_rate = new float[_total_buildings * _total_days];
+        suggested_flu_population_rate = new float[_total_buildings];
         
         for(int i=0; i<_total_buildings; i++){
             observations[i] = new Observation(i, 0);

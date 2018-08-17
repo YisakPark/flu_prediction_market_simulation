@@ -79,4 +79,17 @@ public class FluSpread {
                 
         population_R = total_population - population_S - population_I;                
     }
+    
+    float get_S_rate(){
+        return population_S / (float) total_population * 100;
+    }
+    
+    float get_I_rate(){
+        return population_I / (float) total_population * 100;
+    }
+    
+    float get_R_rate(){
+        return population_R / (float) total_population * 100;
+    }
+    
 }

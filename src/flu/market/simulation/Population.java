@@ -9,6 +9,8 @@ package flu.market.simulation;
  *
  * @author yisak
  */
+
+//the object of this class is used in flu spread class
 public class Population {
     int building_id;
     int population_I;
