@@ -34,6 +34,7 @@ public class Building {
     float minimum_observation_error_rate;
     int number_market_participants;
     int[] participants; //the element of this array is the index of element in 'residents', pointing market participant
+    int total_shares_sold;
     
     //In residents array, from Person[0] to Person[end_of_S] are in state S
     //from residents[end_of_S+1] to Person[end_of_I] are in state I
@@ -76,6 +77,7 @@ public class Building {
                                      number_past_record_participants;
         initialize_residents();
         population_rates = new PopulationRate[total_days];
+        total_shares_sold = 0;
     }
 
     

@@ -16,7 +16,7 @@ import org.jfree.data.xy.XYSeries;
  *
  * @author YisakPark
  */
-public class MarketMaker {
+public class MarketMakerFlatPrice {
     int total_buildings; //number of total_buildings
     int total_days;
     float liquidity_param;
@@ -44,12 +44,14 @@ public class MarketMaker {
     float[][] contact_matrix;
     Population[] populations;
     float[] MSE;
+    float price_per_share;
     
-    public MarketMaker(int _total_buildings, int _total_days, float _liquidity_param, int _total_population_per_building,
+    public MarketMakerFlatPrice(int _total_buildings, int _total_days, float _liquidity_param, int _total_population_per_building,
             float _accurate_observation_participant_rate_per_building, float _inaccurate_observation_participant_rate_per_building,
             float _past_record_participant_rate_per_building, float _initial_money_resident, float _infection_rate, float _recovery_rate,
             float _time_scale, int _initial_population_S_per_building, int _initial_population_I_per_building, int _initial_population_R_per_building,
-            float _maximum_observation_error_rate, float _minimum_observation_error_rate, float _EGT_rate){
+            float _maximum_observation_error_rate, float _minimum_observation_error_rate, float _EGT_rate,
+            float _price_per_share){
         total_buildings = _total_buildings;
         total_days = _total_days;
         liquidity_param = _liquidity_param;
@@ -114,8 +116,8 @@ public class MarketMaker {
         confidence_interval_multiplier = (float) 1.96; //assuming 95% CI
         actual_flu_rate = new float[total_buildings];
         MSE = new float[total_buildings]; //MSE[x] indicated mean squared error of estimated flu population rate for building x
+        price_per_share = _price_per_share;
     }
-
 
     private void initialize_contact_matrix(){
         contact_matrix = new float[total_buildings][total_buildings];        
@@ -164,52 +166,9 @@ public class MarketMaker {
     //'market_date': market date whose security shares will be traded
     //'security_group_ids': the array of security group ids that the securities that user want to buy or sell belongs to
     //'quantity': quantity of shares of securities. If it is positive, buying shares, otherwise selling shares
-    public float get_cost(int market_date, int security_group_id, int quantity){
-        float prior_investment_amount;
-        float posterior_investment_amount;
-        
-        prior_investment_amount = get_investment_amount(market_date);
-        posterior_investment_amount = get_investment_amount(market_date, security_group_id, quantity);
-        return Math.abs(quantity * (posterior_investment_amount - prior_investment_amount)); 
-    }
-
-    //get the investment amount of the market specified by the 'market_date'
-    public float get_investment_amount(int market_date){
-        float value_inside_log = 0;
-        int idx_first_elem;
-        
-        idx_first_elem = get_idx_of_first_elem_of_block(market_date);
-        
-        for(int i=0; i<total_buildings; i++){
-            value_inside_log += Math.exp(security_groups[idx_first_elem + i].shares / liquidity_param);
-        }
-        
-        
-        return (float) (liquidity_param * Math.log(value_inside_log));
-    }
-    
-    //get the updated investment amount of the market
-    public float get_investment_amount(int market_date, int security_group_id, int quantity){
-        float value_inside_log = 0;
-        int idx_first_elem;
-        int updated_quantity;
-        
-        idx_first_elem = get_idx_of_first_elem_of_block(market_date);
-        updated_quantity = security_groups[security_group_id].shares + quantity;
-        
-        for(int i=0; i<total_buildings; i++){
-            if(security_group_id == (idx_first_elem + i)){
-                value_inside_log += Math.exp(updated_quantity / liquidity_param);
-            }
-            else{
-                value_inside_log += Math.exp(security_groups[idx_first_elem+i].shares / liquidity_param);
-            }            
-        }
-                
-        return (float) (liquidity_param * Math.log(value_inside_log));
-    }
-    
-    
+    public float get_cost(int quantity){
+        return quantity * price_per_share;
+    }       
     
     //the array 'security_groups' can be divided into block of securiy_groups which of same market date
     //it returns to the index of the first element of the block specified by 'market_date'
@@ -217,33 +176,15 @@ public class MarketMaker {
         return market_date * total_buildings;
     }
 
-    //update price of the security groups specified by 'market_date'
-    public void update_price(int market_date){
-        float denominator = 0;
-        float numerator;
-        int idx_first_elem = get_idx_of_first_elem_of_block(market_date);
-        
-        //get denominator
-        for(int i=0; i<total_buildings; i++){
-            denominator += Math.exp(security_groups[idx_first_elem + i].shares / liquidity_param);
-        }
-        
-        //get numerator for each security group
-        for(int i=0; i<total_buildings; i++){
-            numerator = (float) Math.exp(security_groups[idx_first_elem + i].shares / liquidity_param);
-            security_groups[idx_first_elem + i].price = numerator / denominator;
-        }
-    }
-    
     //buying the shares
     //return false, if the buying fails, otherwise true.
     public boolean buy_process(int security_group_id, int quantity, float flu_population_rate, int buyer_building_id, int resident_id){
         int market_date = security_groups[security_group_id].market_date;
         //if quantity is <= 0 or buyer cannot affordable, return false
-        if(quantity <= 0 || buildings[buyer_building_id].residents[resident_id].money < get_cost(market_date, security_group_id, quantity))
+        if(quantity <= 0 || buildings[buyer_building_id].residents[resident_id].money < get_cost(quantity))
             return false;
         //update user's current money and shares
-        float cost = get_cost(market_date, security_group_id, quantity);
+        float cost = get_cost(quantity);
         float money = buildings[buyer_building_id].residents[resident_id].money - cost;
         buildings[buyer_building_id].residents[resident_id].setMoney(money);
         buildings[buyer_building_id].residents[resident_id].add_share(
@@ -254,8 +195,7 @@ public class MarketMaker {
         security_groups[security_group_id].shares += quantity;
         security_groups[security_group_id].add_share(
                 new Share(security_group_id, buyer_building_id, resident_id, 
-                flu_population_rate, quantity, security_groups[security_group_id].price));        
-        update_price(market_date);
+                flu_population_rate, quantity, security_groups[security_group_id].price));
         buildings[buyer_building_id].total_shares_sold += quantity;
         return true;
     }
@@ -268,7 +208,7 @@ public class MarketMaker {
         int market_date = security_groups[security_group_id].market_date;
         
         //update user's current money and shares
-        float cost = get_cost(market_date, security_group_id, -quantity);
+        float cost = get_cost(quantity);
         float money = buildings[seller_building_id].residents[resident_id].money + cost;
         buildings[seller_building_id].residents[resident_id].setMoney(money);        
         buildings[seller_building_id].residents[resident_id].remove_share(
@@ -280,7 +220,6 @@ public class MarketMaker {
         security_groups[security_group_id].remove_share(
                 new Share(security_group_id, seller_building_id, resident_id, 
                 flu_population_rate, quantity, security_groups[security_group_id].price));
-        update_price(market_date);
     }
     
     public int get_security_group_id(int date, int building_id){
@@ -525,7 +464,7 @@ public class MarketMaker {
         String FILE_HEADER = "Actual Flu Population,Estimated Flu Population";
         
         try{
-            FileWriter fileWriter = new FileWriter("./result/LMSR/EGT_GT.csv");
+            FileWriter fileWriter = new FileWriter("./result/FLAT_PRICE/EGT_GT.csv");
             fileWriter.append(FILE_HEADER);
             int size = total_days * total_buildings;              
             for(int i=0; i<size; i++){
@@ -548,10 +487,9 @@ public class MarketMaker {
         
         try{
             for(int i=0; i<total_buildings; i++){
-                String FILE_NAME = "../JavaFX_simulation/result/LMSR/population_rates_building_" + i + ".csv";
+                String FILE_NAME = "../JavaFX_simulation/result/FLAT_PRICE/population_rates_building_" + i + ".csv";
                 FileWriter fileWriter = new FileWriter(FILE_NAME);
                 fileWriter.append(FILE_HEADER);
-
                 //append mean squared error
                 fileWriter.append(NEW_LINE_SEPERATOR);
                 fileWriter.append(String.valueOf(MSE[i]));
@@ -587,7 +525,7 @@ public class MarketMaker {
         String day = String.valueOf(day_int);
         
         try{
-            FileWriter fileWriter = new FileWriter("./result/LMSR/money_tracers_day_" + day + ".csv");
+            FileWriter fileWriter = new FileWriter("./result/FLAT_PRICE/money_tracers_day_" + day + ".csv");
 
             //list the money of each user earned by selling shares
             String FILE_HEADER = "rank,current money,money earned by selling shares,money earned by payoff,money lost by buying shares,euclidean distance";        
@@ -686,4 +624,5 @@ public class MarketMaker {
             MSE[i] = _MSE / total_days;
         }
     }
+    
 }
